@@ -1,0 +1,525 @@
+
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import Navbar from '@/components/Navbar';
+import TaskCard from '@/components/TaskCard';
+import NewTaskForm from '@/components/NewTaskForm';
+import CommentSection from '@/components/CommentSection';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Users,
+  UserPlus,
+  CheckCircle2,
+  X,
+  Mail,
+  ChevronRight,
+  Clock,
+  FileEdit,
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Company, User, Task, TaskStatus, Comment, Invitation } from '@/types';
+
+// Mock data
+const mockCompany: Company = {
+  id: '1',
+  name: 'Acme Inc',
+  description: 'Software development company focused on web applications.',
+  ownerId: '1',
+  createdAt: new Date('2023-01-15'),
+};
+
+const mockEmployees: User[] = [
+  {
+    id: '1',
+    name: 'John Doe',
+    email: 'john@example.com',
+    role: 'admin',
+  },
+  {
+    id: '2',
+    name: 'Jane Smith',
+    email: 'jane@example.com',
+    role: 'member',
+  },
+];
+
+const mockTasks: Task[] = [
+  {
+    id: '1',
+    title: 'Implement user authentication',
+    description: 'Set up user registration, login, and password reset functionality',
+    status: 'in-progress',
+    assigneeId: '2',
+    assignee: mockEmployees[1],
+    companyId: '1',
+    createdById: '1',
+    createdBy: mockEmployees[0],
+    createdAt: new Date('2023-05-10'),
+    dueDate: new Date('2023-05-25'),
+    priority: 'high',
+  },
+  {
+    id: '2',
+    title: 'Design landing page',
+    description: 'Create a responsive landing page design with modern aesthetics',
+    status: 'todo',
+    assigneeId: '1',
+    assignee: mockEmployees[0],
+    companyId: '1',
+    createdById: '1',
+    createdBy: mockEmployees[0],
+    createdAt: new Date('2023-05-12'),
+    dueDate: new Date('2023-05-20'),
+    priority: 'medium',
+  },
+];
+
+const mockComments: Comment[] = [
+  {
+    id: '1',
+    content: 'I\'ve started working on this. Will update the status soon.',
+    taskId: '1',
+    authorId: '2',
+    author: mockEmployees[1],
+    createdAt: new Date('2023-05-11T10:30:00'),
+  },
+];
+
+const mockInvitations: Invitation[] = [
+  {
+    id: '1',
+    email: 'mike@example.com',
+    companyId: '1',
+    status: 'pending',
+    role: 'member',
+    createdAt: new Date('2023-05-05'),
+  },
+];
+
+const CompanyPage = () => {
+  const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
+  
+  const [company, setCompany] = useState<Company>(mockCompany);
+  const [employees, setEmployees] = useState<User[]>(mockEmployees);
+  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [comments, setComments] = useState<Comment[]>(mockComments);
+  const [invitations, setInvitations] = useState<Invitation[]>(mockInvitations);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
+  const [taskFilter, setTaskFilter] = useState<TaskStatus | 'all'>('all');
+  
+  // Mock current user
+  const currentUser: User = mockEmployees[0];
+  
+  // Filtered tasks based on selected filter
+  const filteredTasks = tasks.filter(task => 
+    taskFilter === 'all' ? true : task.status === taskFilter
+  );
+  
+  // Task comments
+  const taskComments = selectedTask
+    ? comments.filter(comment => comment.taskId === selectedTask.id)
+    : [];
+  
+  const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, status: newStatus } : task
+    ));
+    
+    toast({
+      title: "Task updated",
+      description: "The task status has been updated successfully.",
+    });
+  };
+  
+  const handleAddComment = (taskId: string, content: string) => {
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      content,
+      taskId,
+      authorId: currentUser.id,
+      author: currentUser,
+      createdAt: new Date(),
+    };
+    
+    setComments([...comments, newComment]);
+    
+    toast({
+      title: "Comment added",
+      description: "Your comment has been added to the task.",
+    });
+  };
+  
+  const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt'>) => {
+    const newTask: Task = {
+      ...taskData,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+      assignee: employees.find(emp => emp.id === taskData.assigneeId),
+      createdBy: currentUser,
+    };
+    
+    setTasks([...tasks, newTask]);
+    
+    toast({
+      title: "Task created",
+      description: "The new task has been created successfully.",
+    });
+  };
+  
+  const handleInviteEmployee = () => {
+    if (!newEmployeeEmail.trim()) return;
+    
+    const newInvitation: Invitation = {
+      id: Date.now().toString(),
+      email: newEmployeeEmail,
+      companyId: company.id,
+      status: 'pending',
+      role: 'member',
+      createdAt: new Date(),
+    };
+    
+    setInvitations([...invitations, newInvitation]);
+    setNewEmployeeEmail('');
+    setIsAddingEmployee(false);
+    
+    toast({
+      title: "Invitation sent",
+      description: `An invitation has been sent to ${newEmployeeEmail}.`,
+    });
+  };
+  
+  const handleCancelInvitation = (invitationId: string) => {
+    setInvitations(invitations.filter(inv => inv.id !== invitationId));
+    
+    toast({
+      title: "Invitation cancelled",
+      description: "The invitation has been cancelled.",
+    });
+  };
+  
+  return (
+    <div className="min-h-screen bg-gray-50 pb-10">
+      <Navbar />
+      
+      <div className="max-w-7xl mx-auto pt-24 px-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">{company.name}</h1>
+            <p className="text-gray-600">{company.description}</p>
+          </div>
+          <div className="flex gap-3">
+            <Dialog open={isAddingEmployee} onOpenChange={setIsAddingEmployee}>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setIsAddingEmployee(true)}
+              >
+                <UserPlus className="h-4 w-4" />
+                Invite Employee
+              </Button>
+              <DialogContent className="sm:max-w-[425px] animate-slide-up">
+                <DialogHeader>
+                  <DialogTitle>Invite a new team member</DialogTitle>
+                  <DialogDescription>
+                    Send an invitation email to add someone to your company.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium">
+                      Email Address
+                    </label>
+                    <Input
+                      id="email"
+                      placeholder="colleague@example.com"
+                      type="email"
+                      value={newEmployeeEmail}
+                      onChange={(e) => setNewEmployeeEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={handleInviteEmployee}>
+                      Send Invitation
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <NewTaskForm
+              companyId={company.id}
+              onCreateTask={handleCreateTask}
+              employees={employees}
+              currentUser={currentUser}
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3">
+            <Tabs defaultValue="tasks" className="w-full">
+              <TabsList className="grid grid-cols-2 w-[400px] mb-6">
+                <TabsTrigger value="tasks" className="flex items-center gap-2">
+                  <FileEdit className="h-4 w-4" />
+                  Tasks
+                </TabsTrigger>
+                <TabsTrigger value="team" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Team
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="tasks" className="mt-0">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant={taskFilter === 'all' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setTaskFilter('all')}
+                    >
+                      All
+                    </Button>
+                    <Button 
+                      variant={taskFilter === 'todo' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setTaskFilter('todo')}
+                    >
+                      To Do
+                    </Button>
+                    <Button 
+                      variant={taskFilter === 'in-progress' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setTaskFilter('in-progress')}
+                    >
+                      In Progress
+                    </Button>
+                    <Button 
+                      variant={taskFilter === 'review' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setTaskFilter('review')}
+                    >
+                      Review
+                    </Button>
+                    <Button 
+                      variant={taskFilter === 'done' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setTaskFilter('done')}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+                
+                {filteredTasks.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                    <div className="mb-4">
+                      <CheckCircle2 className="h-12 w-12 mx-auto text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">No tasks found</h3>
+                    <p className="text-gray-500 mb-4">
+                      {taskFilter === 'all' 
+                        ? "There are no tasks in this company yet." 
+                        : `There are no tasks with "${taskFilter}" status.`}
+                    </p>
+                    <NewTaskForm
+                      companyId={company.id}
+                      onCreateTask={handleCreateTask}
+                      employees={employees}
+                      currentUser={currentUser}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredTasks.map(task => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onStatusChange={handleStatusChange}
+                        onOpenTask={setSelectedTask}
+                        currentUser={currentUser}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="team" className="mt-0">
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="p-6 border-b border-gray-200">
+                    <h3 className="text-lg font-medium">Team Members</h3>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    {employees.map(employee => (
+                      <div key={employee.id} className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            {employee.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{employee.name}</p>
+                            <p className="text-sm text-gray-500">{employee.email}</p>
+                          </div>
+                        </div>
+                        <Badge variant={employee.role === 'admin' ? 'default' : 'outline'}>
+                          {employee.role === 'admin' ? 'Admin' : 'Member'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {invitations.length > 0 && (
+                    <>
+                      <div className="p-6 border-b border-gray-200 border-t">
+                        <h3 className="text-lg font-medium">Pending Invitations</h3>
+                      </div>
+                      <div className="divide-y divide-gray-200">
+                        {invitations.map(invitation => (
+                          <div key={invitation.id} className="flex items-center justify-between p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                                <Mail className="h-5 w-5 text-yellow-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{invitation.email}</p>
+                                <p className="text-sm text-gray-500 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Invited {new Date(invitation.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleCancelInvitation(invitation.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-gray-200 p-6 h-fit">
+            <h3 className="font-medium text-lg mb-4">Activity</h3>
+            <div className="space-y-4">
+              {[...comments]
+                .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+                .slice(0, 5)
+                .map(comment => (
+                  <div key={comment.id} className="flex gap-3 text-sm">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center">
+                      {comment.author?.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p>
+                        <span className="font-medium">{comment.author?.name}</span>{' '}
+                        commented on a task
+                      </p>
+                      <p className="text-gray-500 text-xs mt-1">
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              
+              {comments.length === 0 && (
+                <p className="text-gray-500 text-sm">No recent activity</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Task Detail Dialog */}
+      <Dialog 
+        open={!!selectedTask} 
+        onOpenChange={(open) => !open && setSelectedTask(null)}
+      >
+        {selectedTask && (
+          <DialogContent className="sm:max-w-[700px] animate-slide-up">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Badge className={`status-badge ${selectedTask.status === 'todo' ? 'bg-blue-50 text-blue-600' : 
+                  selectedTask.status === 'in-progress' ? 'bg-yellow-50 text-yellow-600' : 
+                  selectedTask.status === 'review' ? 'bg-purple-50 text-purple-600' : 
+                  'bg-green-50 text-green-600'}`}>
+                  {selectedTask.status.replace('-', ' ').toUpperCase()}
+                </Badge>
+                {selectedTask.priority === 'high' && (
+                  <Badge variant="destructive" className="ml-2">High</Badge>
+                )}
+              </div>
+              <DialogTitle className="text-xl mt-2">{selectedTask.title}</DialogTitle>
+              <DialogDescription>
+                Created by {selectedTask.createdBy?.name} on {new Date(selectedTask.createdAt).toLocaleDateString()}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-sm font-medium mb-2">Description</h4>
+                <p className="text-gray-700 bg-gray-50 p-3 rounded-md">
+                  {selectedTask.description}
+                </p>
+              </div>
+              
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Assignee</h4>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">
+                      {selectedTask.assignee?.name.charAt(0)}
+                    </div>
+                    <span className="text-sm">{selectedTask.assignee?.name}</span>
+                  </div>
+                </div>
+                
+                {selectedTask.dueDate && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Due Date</h4>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      {new Date(selectedTask.dueDate).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <CommentSection
+                comments={taskComments}
+                taskId={selectedTask.id}
+                currentUser={currentUser}
+                onAddComment={handleAddComment}
+              />
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
+    </div>
+  );
+};
+
+export default CompanyPage;
