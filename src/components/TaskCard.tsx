@@ -19,11 +19,10 @@ type TaskCardProps = {
   onStatusChange: (id: string, status: TaskStatus) => void;
   onOpenTask: (task: Task) => void;
   currentUser: User;
+  isUpdating?: boolean;
 };
 
-const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser }: TaskCardProps) => {
-  const [isUpdating, setIsUpdating] = useState(false);
-  
+const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = false }: TaskCardProps) => {
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
       case 'todo': return 'bg-blue-50 text-blue-600';
@@ -44,9 +43,7 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser }: TaskCardPro
   };
 
   const handleStatusChange = (value: string) => {
-    setIsUpdating(true);
     onStatusChange(task.id, value as TaskStatus);
-    setTimeout(() => setIsUpdating(false), 500);
   };
 
   const isAssignedToMe = task.assigneeId === currentUser.id;

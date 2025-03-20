@@ -37,12 +37,13 @@ import { cn } from '@/lib/utils';
 
 type NewTaskFormProps = {
   companyId: string;
-  onCreateTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  onCreateTask: (task: Omit<Task, 'id' | 'createdAt' | 'assignee' | 'createdBy'>) => void;
   employees: User[];
   currentUser: User;
+  isCreating?: boolean;
 };
 
-const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser }: NewTaskFormProps) => {
+const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreating = false }: NewTaskFormProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
   
@@ -202,7 +203,9 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser }: NewTas
             </FormItem>
             
             <DialogFooter>
-              <Button type="submit">Create Task</Button>
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? "Creating..." : "Create Task"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

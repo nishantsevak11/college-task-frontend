@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Users,
   UserPlus,
@@ -31,17 +33,14 @@ import {
   FileEdit,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, isApiError } from '@/services/api';
 import {
   Company,
   Task,
   TaskStatus,
   Comment,
   Invitation,
-  mockCompanies,
-  mockEmployees,
-  mockTasks,
-  mockComments,
-  mockInvitations,
   currentUser
 } from '@/types';
 
@@ -49,23 +48,25 @@ const CompanyPage = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
-  const companyData = mockCompanies.find(c => c.id === id);
-  
-  const [company, setCompany] = useState<Company | undefined>(companyData);
-  const [employees, setEmployees] = useState<typeof mockEmployees>(mockEmployees);
-  const [tasks, setTasks] = useState<typeof mockTasks>(mockTasks.filter(task => task.companyId === id));
-  const [comments, setComments] = useState<typeof mockComments>(mockComments);
-  const [invitations, setInvitations] = useState<typeof mockInvitations>(
-    mockInvitations.filter(inv => inv.companyId === id)
-  );
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
   const [taskFilter, setTaskFilter] = useState<TaskStatus | 'all'>('all');
   
-  useEffect(() => {
-    if (!company) {
+  // Fetch company data
+  const { data: company, isLoading: isLoadingCompany, error: companyError } = useQuery({
+    queryKey: ['company', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const response = await api.getCompany(id);
+      if (isApiError(response)) {
+        throw new Error(response.error);
+      }
+      return response;
+    },
+    onError: (error) => {
       toast({
         title: "Company not found",
         description: "The company you're looking for doesn't exist.",
@@ -73,7 +74,148 @@ const CompanyPage = () => {
       });
       navigate('/dashboard');
     }
-  }, [company, navigate, toast]);
+  });
+  
+  // Fetch employees
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: async () => {
+      const response = await api.getEmployees();
+      if (isApiError(response)) {
+        toast({
+          title: "Error",
+          description: "Failed to load employees.",
+          variant: "destructive"
+        });
+        return [];
+      }
+      return response;
+    }
+  });
+  
+  // Fetch tasks
+  const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
+    queryKey: ['tasks', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const response = await api.getTasks(id);
+      if (isApiError(response)) {
+        toast({
+          title: "Error",
+          description: "Failed to load tasks.",
+          variant: "destructive"
+        });
+        return [];
+      }
+      return response;
+    },
+    enabled: !!id
+  });
+  
+  // Fetch invitations
+  const { data: invitations = [] } = useQuery({
+    queryKey: ['invitations', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const response = await api.getInvitations(id);
+      if (isApiError(response)) {
+        return [];
+      }
+      return response;
+    },
+    enabled: !!id
+  });
+  
+  // Fetch comments
+  const { data: comments = [] } = useQuery({
+    queryKey: ['comments'],
+    queryFn: async () => {
+      const promises = tasks.map(task => api.getComments(task.id));
+      const responses = await Promise.all(promises);
+      const allComments = responses.flatMap(response => {
+        if (isApiError(response)) return [];
+        return response;
+      });
+      return allComments;
+    },
+    enabled: tasks.length > 0
+  });
+  
+  // Task status mutation
+  const updateTaskStatusMutation = useMutation({
+    mutationFn: ({ taskId, newStatus }: { taskId: string; newStatus: TaskStatus }) => 
+      api.updateTaskStatus(taskId, newStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', id] });
+      toast({
+        title: "Task updated",
+        description: "The task status has been updated successfully.",
+      });
+    }
+  });
+  
+  // Create task mutation
+  const createTaskMutation = useMutation({
+    mutationFn: (taskData: Omit<Task, 'id' | 'createdAt' | 'assignee' | 'createdBy'>) => 
+      api.createTask(taskData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', id] });
+      toast({
+        title: "Task created",
+        description: "The new task has been created successfully.",
+      });
+    }
+  });
+  
+  // Create comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: ({ taskId, content }: { taskId: string; content: string }) => 
+      api.createComment({
+        taskId,
+        content,
+        authorId: currentUser.id
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
+      toast({
+        title: "Comment added",
+        description: "Your comment has been added to the task.",
+      });
+    }
+  });
+  
+  // Create invitation mutation
+  const createInvitationMutation = useMutation({
+    mutationFn: (email: string) => {
+      if (!id) throw new Error("Company ID not found");
+      return api.createInvitation({
+        email,
+        companyId: id,
+        role: 'member'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invitations', id] });
+      setNewEmployeeEmail('');
+      setIsAddingEmployee(false);
+      toast({
+        title: "Invitation sent",
+        description: `An invitation has been sent to ${newEmployeeEmail}.`,
+      });
+    }
+  });
+  
+  // Cancel invitation mutation
+  const cancelInvitationMutation = useMutation({
+    mutationFn: (invitationId: string) => api.cancelInvitation(invitationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invitations', id] });
+      toast({
+        title: "Invitation cancelled",
+        description: "The invitation has been cancelled.",
+      });
+    }
+  });
   
   const filteredTasks = tasks.filter(task => 
     taskFilter === 'all' ? true : task.status === taskFilter
@@ -84,103 +226,42 @@ const CompanyPage = () => {
     : [];
   
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    const updatedTasks = tasks.map(task => 
-      task.id === taskId ? { ...task, status: newStatus } : task
-    );
-    
-    const taskIndex = mockTasks.findIndex(t => t.id === taskId);
-    if (taskIndex !== -1) {
-      mockTasks[taskIndex].status = newStatus;
-    }
-    
-    setTasks(updatedTasks);
-    
-    toast({
-      title: "Task updated",
-      description: "The task status has been updated successfully.",
-    });
+    updateTaskStatusMutation.mutate({ taskId, newStatus });
   };
   
   const handleAddComment = (taskId: string, content: string) => {
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      content,
-      taskId,
-      authorId: currentUser.id,
-      author: currentUser,
-      createdAt: new Date(),
-    };
-    
-    mockComments.push(newComment);
-    
-    setComments([...comments, newComment]);
-    
-    toast({
-      title: "Comment added",
-      description: "Your comment has been added to the task.",
-    });
+    createCommentMutation.mutate({ taskId, content });
   };
   
-  const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt'>) => {
-    const newTask: Task = {
-      ...taskData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      assignee: employees.find(emp => emp.id === taskData.assigneeId),
-      createdBy: currentUser,
-    };
-    
-    mockTasks.push(newTask);
-    
-    setTasks([...tasks, newTask]);
-    
-    toast({
-      title: "Task created",
-      description: "The new task has been created successfully.",
-    });
+  const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'assignee' | 'createdBy'>) => {
+    createTaskMutation.mutate(taskData);
   };
   
   const handleInviteEmployee = () => {
     if (!newEmployeeEmail.trim()) return;
-    
-    const newInvitation: Invitation = {
-      id: Date.now().toString(),
-      email: newEmployeeEmail,
-      companyId: company?.id || "",
-      status: 'pending',
-      role: 'member',
-      createdAt: new Date(),
-    };
-    
-    mockInvitations.push(newInvitation);
-    
-    setInvitations([...invitations, newInvitation]);
-    setNewEmployeeEmail('');
-    setIsAddingEmployee(false);
-    
-    toast({
-      title: "Invitation sent",
-      description: `An invitation has been sent to ${newEmployeeEmail}.`,
-    });
+    createInvitationMutation.mutate(newEmployeeEmail);
   };
   
   const handleCancelInvitation = (invitationId: string) => {
-    const invIndex = mockInvitations.findIndex(inv => inv.id === invitationId);
-    if (invIndex !== -1) {
-      mockInvitations.splice(invIndex, 1);
-    }
-    
-    setInvitations(invitations.filter(inv => inv.id !== invitationId));
-    
-    toast({
-      title: "Invitation cancelled",
-      description: "The invitation has been cancelled.",
-    });
+    cancelInvitationMutation.mutate(invitationId);
   };
   
-  if (!company) {
-    return null;
+  if (isLoadingCompany && !company) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-10">
+        <Navbar />
+        <div className="max-w-7xl mx-auto pt-24 px-6">
+          <div className="animate-pulse">
+            <Skeleton className="h-10 w-1/4 mb-4" />
+            <Skeleton className="h-5 w-1/3 mb-8" />
+            {/* More skeleton content here */}
+          </div>
+        </div>
+      </div>
+    );
   }
+  
+  if (!company) return null;
   
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
@@ -223,8 +304,11 @@ const CompanyPage = () => {
                     />
                   </div>
                   <div className="flex justify-end">
-                    <Button onClick={handleInviteEmployee}>
-                      Send Invitation
+                    <Button 
+                      onClick={handleInviteEmployee}
+                      disabled={createInvitationMutation.isPending}
+                    >
+                      {createInvitationMutation.isPending ? 'Sending...' : 'Send Invitation'}
                     </Button>
                   </div>
                 </div>
@@ -235,6 +319,7 @@ const CompanyPage = () => {
               onCreateTask={handleCreateTask}
               employees={employees}
               currentUser={currentUser}
+              isCreating={createTaskMutation.isPending}
             />
           </div>
         </div>
@@ -294,7 +379,15 @@ const CompanyPage = () => {
                   </div>
                 </div>
                 
-                {filteredTasks.length === 0 ? (
+                {isLoadingTasks ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <div key={index} className="animate-pulse">
+                        <Skeleton className="h-48 w-full rounded-lg" />
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredTasks.length === 0 ? (
                   <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
                     <div className="mb-4">
                       <CheckCircle2 className="h-12 w-12 mx-auto text-gray-400" />
@@ -310,6 +403,7 @@ const CompanyPage = () => {
                       onCreateTask={handleCreateTask}
                       employees={employees}
                       currentUser={currentUser}
+                      isCreating={createTaskMutation.isPending}
                     />
                   </div>
                 ) : (
@@ -321,6 +415,7 @@ const CompanyPage = () => {
                         onStatusChange={handleStatusChange}
                         onOpenTask={setSelectedTask}
                         currentUser={currentUser}
+                        isUpdating={updateTaskStatusMutation.isPending}
                       />
                     ))}
                   </div>
@@ -376,6 +471,7 @@ const CompanyPage = () => {
                               size="sm" 
                               className="text-red-500 hover:text-red-700 hover:bg-red-50"
                               onClick={() => handleCancelInvitation(invitation.id)}
+                              disabled={cancelInvitationMutation.isPending}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -479,6 +575,7 @@ const CompanyPage = () => {
                 taskId={selectedTask.id}
                 currentUser={currentUser}
                 onAddComment={handleAddComment}
+                isSubmitting={createCommentMutation.isPending}
               />
             </div>
           </DialogContent>

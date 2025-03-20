@@ -11,18 +11,22 @@ type CommentSectionProps = {
   taskId: string;
   currentUser: User;
   onAddComment: (taskId: string, content: string) => void;
+  isSubmitting?: boolean;
 };
 
-const CommentSection = ({ comments, taskId, currentUser, onAddComment }: CommentSectionProps) => {
+const CommentSection = ({ 
+  comments, 
+  taskId, 
+  currentUser, 
+  onAddComment,
+  isSubmitting = false
+}: CommentSectionProps) => {
   const [newComment, setNewComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = () => {
     if (newComment.trim()) {
-      setIsSubmitting(true);
       onAddComment(taskId, newComment);
       setNewComment('');
-      setTimeout(() => setIsSubmitting(false), 500);
     }
   };
 

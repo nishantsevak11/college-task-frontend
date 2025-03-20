@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -9,14 +9,17 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { PlusCircle, Building, UserPlus } from 'lucide-react';
-import { Company, currentUser, mockCompanies } from '@/types';
+import { Company, currentUser } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { api, isApiError } from '@/services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Dashboard = () => {
-  const [companies, setCompanies] = useState<Company[]>(mockCompanies);
   const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const form = useForm({
     defaultValues: {
@@ -25,28 +28,47 @@ const Dashboard = () => {
     },
   });
   
+  // Fetch companies using React Query
+  const { data: companies = [], isLoading } = useQuery({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const response = await api.getCompanies();
+      if (isApiError(response)) {
+        toast({
+          title: "Error",
+          description: response.error,
+          variant: "destructive",
+        });
+        return [];
+      }
+      return response;
+    },
+  });
+  
+  // Create company mutation
+  const createCompanyMutation = useMutation({
+    mutationFn: api.createCompany,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      form.reset();
+      setIsCreating(false);
+      
+      toast({
+        title: "Company created",
+        description: "Company has been created successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create company. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
   const onCreateCompany = (data: { name: string; description: string }) => {
-    const newCompany: Company = {
-      id: Date.now().toString(),
-      name: data.name,
-      description: data.description,
-      ownerId: currentUser.id,
-      createdAt: new Date(),
-    };
-    
-    // Add to mock data to persist between components
-    mockCompanies.push(newCompany);
-    
-    // Update state to trigger re-render
-    setCompanies([...mockCompanies]);
-    
-    form.reset();
-    setIsCreating(false);
-    
-    toast({
-      title: "Company created",
-      description: `${data.name} has been created successfully.`,
-    });
+    createCompanyMutation.mutate(data);
   };
   
   return (
@@ -93,7 +115,12 @@ const Dashboard = () => {
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Create Company</Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createCompanyMutation.isPending}
+                  >
+                    {createCompanyMutation.isPending ? 'Creating...' : 'Create Company'}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -101,44 +128,67 @@ const Dashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {companies.map((company) => (
-            <Card key={company.id} className="overflow-hidden animate-scale-in glass-card">
-              <CardHeader className="bg-slate-50">
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="h-5 w-5" />
-                  {company.name}
-                </CardTitle>
-                <CardDescription>
-                  Created on {company.createdAt.toLocaleDateString()}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  {company.description}
-                </p>
-                <div className="flex -space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
-                    JD
+          {isLoading ? (
+            // Skeleton loading state
+            Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} className="overflow-hidden">
+                <CardHeader className="bg-slate-50">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <Skeleton className="h-12 w-full mb-4" />
+                  <div className="flex -space-x-2">
+                    <Skeleton className="w-8 h-8 rounded-full" />
+                    <Skeleton className="w-8 h-8 rounded-full" />
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs">
-                    AB
+                </CardContent>
+                <CardFooter className="bg-gray-50 justify-end">
+                  <Skeleton className="h-9 w-28" />
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+            // Actual company cards
+            companies.map((company) => (
+              <Card key={company.id} className="overflow-hidden animate-scale-in glass-card">
+                <CardHeader className="bg-slate-50">
+                  <CardTitle className="flex items-center gap-2">
+                    <Building className="h-5 w-5" />
+                    {company.name}
+                  </CardTitle>
+                  <CardDescription>
+                    Created on {company.createdAt.toLocaleDateString()}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-gray-600 mb-4">
+                    {company.description}
+                  </p>
+                  <div className="flex -space-x-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
+                      JD
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs">
+                      AB
+                    </div>
+                    <div className="w-8 h-8 rounded-full border-2 border-white bg-white flex items-center justify-center">
+                      <UserPlus className="h-4 w-4 text-gray-400" />
+                    </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full border-2 border-white bg-white flex items-center justify-center">
-                    <UserPlus className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="bg-gray-50 justify-end">
-                <Button 
-                  variant="outline" 
-                  className="gap-2"
-                  onClick={() => navigate(`/company/${company.id}`)}
-                >
-                  View Company
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                </CardContent>
+                <CardFooter className="bg-gray-50 justify-end">
+                  <Button 
+                    variant="outline" 
+                    className="gap-2"
+                    onClick={() => navigate(`/company/${company.id}`)}
+                  >
+                    View Company
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))
+          )}
           
           <Card 
             className="border-dashed border-gray-300 bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer flex flex-col items-center justify-center py-10"
