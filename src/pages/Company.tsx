@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import TaskCard from '@/components/TaskCard';
 import NewTaskForm from '@/components/NewTaskForm';
@@ -32,116 +31,69 @@ import {
   FileEdit,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Company, User, Task, TaskStatus, Comment, Invitation } from '@/types';
-
-// Mock data
-const mockCompany: Company = {
-  id: '1',
-  name: 'Acme Inc',
-  description: 'Software development company focused on web applications.',
-  ownerId: '1',
-  createdAt: new Date('2023-01-15'),
-};
-
-const mockEmployees: User[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'admin',
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    role: 'member',
-  },
-];
-
-const mockTasks: Task[] = [
-  {
-    id: '1',
-    title: 'Implement user authentication',
-    description: 'Set up user registration, login, and password reset functionality',
-    status: 'in-progress',
-    assigneeId: '2',
-    assignee: mockEmployees[1],
-    companyId: '1',
-    createdById: '1',
-    createdBy: mockEmployees[0],
-    createdAt: new Date('2023-05-10'),
-    dueDate: new Date('2023-05-25'),
-    priority: 'high',
-  },
-  {
-    id: '2',
-    title: 'Design landing page',
-    description: 'Create a responsive landing page design with modern aesthetics',
-    status: 'todo',
-    assigneeId: '1',
-    assignee: mockEmployees[0],
-    companyId: '1',
-    createdById: '1',
-    createdBy: mockEmployees[0],
-    createdAt: new Date('2023-05-12'),
-    dueDate: new Date('2023-05-20'),
-    priority: 'medium',
-  },
-];
-
-const mockComments: Comment[] = [
-  {
-    id: '1',
-    content: 'I\'ve started working on this. Will update the status soon.',
-    taskId: '1',
-    authorId: '2',
-    author: mockEmployees[1],
-    createdAt: new Date('2023-05-11T10:30:00'),
-  },
-];
-
-const mockInvitations: Invitation[] = [
-  {
-    id: '1',
-    email: 'mike@example.com',
-    companyId: '1',
-    status: 'pending',
-    role: 'member',
-    createdAt: new Date('2023-05-05'),
-  },
-];
+import {
+  Company,
+  Task,
+  TaskStatus,
+  Comment,
+  Invitation,
+  mockCompanies,
+  mockEmployees,
+  mockTasks,
+  mockComments,
+  mockInvitations,
+  currentUser
+} from '@/types';
 
 const CompanyPage = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
-  const [company, setCompany] = useState<Company>(mockCompany);
-  const [employees, setEmployees] = useState<User[]>(mockEmployees);
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
-  const [comments, setComments] = useState<Comment[]>(mockComments);
-  const [invitations, setInvitations] = useState<Invitation[]>(mockInvitations);
+  const companyData = mockCompanies.find(c => c.id === id);
+  
+  const [company, setCompany] = useState<Company | undefined>(companyData);
+  const [employees, setEmployees] = useState<typeof mockEmployees>(mockEmployees);
+  const [tasks, setTasks] = useState<typeof mockTasks>(mockTasks.filter(task => task.companyId === id));
+  const [comments, setComments] = useState<typeof mockComments>(mockComments);
+  const [invitations, setInvitations] = useState<typeof mockInvitations>(
+    mockInvitations.filter(inv => inv.companyId === id)
+  );
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
   const [taskFilter, setTaskFilter] = useState<TaskStatus | 'all'>('all');
   
-  // Mock current user
-  const currentUser: User = mockEmployees[0];
+  useEffect(() => {
+    if (!company) {
+      toast({
+        title: "Company not found",
+        description: "The company you're looking for doesn't exist.",
+        variant: "destructive"
+      });
+      navigate('/dashboard');
+    }
+  }, [company, navigate, toast]);
   
-  // Filtered tasks based on selected filter
   const filteredTasks = tasks.filter(task => 
     taskFilter === 'all' ? true : task.status === taskFilter
   );
   
-  // Task comments
   const taskComments = selectedTask
     ? comments.filter(comment => comment.taskId === selectedTask.id)
     : [];
   
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    setTasks(tasks.map(task => 
+    const updatedTasks = tasks.map(task => 
       task.id === taskId ? { ...task, status: newStatus } : task
-    ));
+    );
+    
+    const taskIndex = mockTasks.findIndex(t => t.id === taskId);
+    if (taskIndex !== -1) {
+      mockTasks[taskIndex].status = newStatus;
+    }
+    
+    setTasks(updatedTasks);
     
     toast({
       title: "Task updated",
@@ -158,6 +110,8 @@ const CompanyPage = () => {
       author: currentUser,
       createdAt: new Date(),
     };
+    
+    mockComments.push(newComment);
     
     setComments([...comments, newComment]);
     
@@ -176,6 +130,8 @@ const CompanyPage = () => {
       createdBy: currentUser,
     };
     
+    mockTasks.push(newTask);
+    
     setTasks([...tasks, newTask]);
     
     toast({
@@ -190,11 +146,13 @@ const CompanyPage = () => {
     const newInvitation: Invitation = {
       id: Date.now().toString(),
       email: newEmployeeEmail,
-      companyId: company.id,
+      companyId: company?.id || "",
       status: 'pending',
       role: 'member',
       createdAt: new Date(),
     };
+    
+    mockInvitations.push(newInvitation);
     
     setInvitations([...invitations, newInvitation]);
     setNewEmployeeEmail('');
@@ -207,6 +165,11 @@ const CompanyPage = () => {
   };
   
   const handleCancelInvitation = (invitationId: string) => {
+    const invIndex = mockInvitations.findIndex(inv => inv.id === invitationId);
+    if (invIndex !== -1) {
+      mockInvitations.splice(invIndex, 1);
+    }
+    
     setInvitations(invitations.filter(inv => inv.id !== invitationId));
     
     toast({
@@ -214,6 +177,10 @@ const CompanyPage = () => {
       description: "The invitation has been cancelled.",
     });
   };
+  
+  if (!company) {
+    return null;
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
@@ -453,7 +420,6 @@ const CompanyPage = () => {
         </div>
       </div>
       
-      {/* Task Detail Dialog */}
       <Dialog 
         open={!!selectedTask} 
         onOpenChange={(open) => !open && setSelectedTask(null)}

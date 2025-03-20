@@ -9,38 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { PlusCircle, Building, UserPlus } from 'lucide-react';
-import { Company, User } from '@/types';
-
-// Mock current user
-const currentUser: User = {
-  id: '1',
-  name: 'John Doe',
-  email: 'john@example.com',
-  role: 'admin',
-};
-
-// Mock companies
-const mockCompanies: Company[] = [
-  {
-    id: '1',
-    name: 'Acme Inc',
-    description: 'Software development company focused on web applications.',
-    ownerId: '1',
-    createdAt: new Date('2023-01-15'),
-  },
-  {
-    id: '2',
-    name: 'Globex Corporation',
-    description: 'Marketing and branding agency.',
-    ownerId: '1',
-    createdAt: new Date('2023-03-22'),
-  },
-];
+import { Company, currentUser, mockCompanies } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 const Dashboard = () => {
   const [companies, setCompanies] = useState<Company[]>(mockCompanies);
   const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const form = useForm({
     defaultValues: {
@@ -58,9 +34,19 @@ const Dashboard = () => {
       createdAt: new Date(),
     };
     
-    setCompanies([...companies, newCompany]);
+    // Add to mock data to persist between components
+    mockCompanies.push(newCompany);
+    
+    // Update state to trigger re-render
+    setCompanies([...mockCompanies]);
+    
     form.reset();
     setIsCreating(false);
+    
+    toast({
+      title: "Company created",
+      description: `${data.name} has been created successfully.`,
+    });
   };
   
   return (
