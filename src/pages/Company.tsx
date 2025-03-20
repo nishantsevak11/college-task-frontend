@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -55,7 +54,7 @@ const CompanyPage = () => {
   const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
   const [taskFilter, setTaskFilter] = useState<TaskStatus | 'all'>('all');
   
-  // Fetch company data
+  // Fetch company data - fixed version without onSuccess and with meta for error handling
   const { data: company, isLoading: isLoadingCompany, error: companyError } = useQuery({
     queryKey: ['company', id],
     queryFn: async () => {
@@ -66,11 +65,8 @@ const CompanyPage = () => {
       }
       return response;
     },
-    onSuccess: (data) => {
-      // Handle success if needed
-    },
-    onSettled: (data, error) => {
-      if (error) {
+    meta: {
+      onError: () => {
         toast({
           title: "Company not found",
           description: "The company you're looking for doesn't exist.",
