@@ -66,13 +66,18 @@ const CompanyPage = () => {
       }
       return response;
     },
-    onError: (error) => {
-      toast({
-        title: "Company not found",
-        description: "The company you're looking for doesn't exist.",
-        variant: "destructive"
-      });
-      navigate('/dashboard');
+    onSuccess: (data) => {
+      // Handle success if needed
+    },
+    onSettled: (data, error) => {
+      if (error) {
+        toast({
+          title: "Company not found",
+          description: "The company you're looking for doesn't exist.",
+          variant: "destructive"
+        });
+        navigate('/dashboard');
+      }
     }
   });
   
