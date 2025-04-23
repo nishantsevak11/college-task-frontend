@@ -5,6 +5,8 @@ export type User = {
   lastName: string;
   email: string;
   role?: string;
+  // Added for UI compatibility - can be empty string if not available
+  avatar?: string;
 };
 
 export type CompanyMember = {
@@ -18,9 +20,13 @@ export type Company = {
   description?: string;
   owner: User;
   members: CompanyMember[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
+
+export type TaskPriority = 'low' | 'medium' | 'high';
 
 export type Task = {
   _id: string;
@@ -32,6 +38,9 @@ export type Task = {
   createdBy: User;
   createdAt: string;
   updatedAt: string;
+  // Added for UI compatibility
+  priority?: TaskPriority;
+  dueDate?: string;
 };
 
 export type Comment = {
@@ -39,6 +48,15 @@ export type Comment = {
   content: string;
   task: string;
   author: User;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Invitation = {
+  _id: string;
+  email: string;
+  company: string;
+  role: string;
   createdAt: string;
   updatedAt: string;
 };

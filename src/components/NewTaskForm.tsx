@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils';
 
 type NewTaskFormProps = {
   companyId: string;
-  onCreateTask: (task: Omit<Task, '_id' | 'createdAt' | 'assignedTo' | 'createdBy'>) => void;
+  onCreateTask: (task: any) => void;
   employees: User[];
   currentUser: User;
   isCreating?: boolean;

@@ -54,7 +54,7 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
           <Badge className={`status-badge ${getStatusColor(task.status)}`}>
             {task.status.replace('_', ' ').toUpperCase()}
           </Badge>
-          {getPriorityBadge(task.priority)}
+          {task.priority && getPriorityBadge(task.priority)}
         </div>
         {isAssignedToMe && (
           <Select value={task.status} onValueChange={handleStatusChange} disabled={isUpdating}>
@@ -77,7 +77,6 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
         <div className="flex items-center">
           {task.assignedTo && (
             <Avatar className="h-8 w-8">
-              <AvatarImage src={task.assignedTo.avatar} />
               <AvatarFallback>{task.assignedTo.firstName.charAt(0)}</AvatarFallback>
             </Avatar>
           )}

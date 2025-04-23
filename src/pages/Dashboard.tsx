@@ -173,7 +173,7 @@ const Dashboard = () => {
                     {company.name}
                   </CardTitle>
                   <CardDescription>
-                    Created on {new Date(company.createdAt).toLocaleDateString()}
+                    Created on {company.createdAt ? new Date(company.createdAt).toLocaleDateString() : 'N/A'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">

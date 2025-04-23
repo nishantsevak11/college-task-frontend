@@ -6,7 +6,8 @@ import {
   User, 
   Comment, 
   TaskStatus,
-  AuthResponse
+  AuthResponse,
+  Invitation
 } from '@/types';
 
 // API base URL
@@ -78,6 +79,10 @@ export const authService = {
       }
       throw error;
     }
+  },
+
+  logout: () => {
+    localStorage.removeItem('authToken');
   }
 };
 
@@ -156,6 +161,58 @@ export const companyService = {
       }
       throw error;
     }
+  },
+
+  // Added missing methods for employees and invitations
+  getEmployees: async (companyId: string) => {
+    try {
+      const response = await api.get<User[]>(`/companies/${companyId}/employees`);
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return error;
+      }
+      throw error;
+    }
+  },
+
+  getInvitations: async (companyId: string) => {
+    try {
+      const response = await api.get<Invitation[]>(`/companies/${companyId}/invitations`);
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return error;
+      }
+      throw error;
+    }
+  },
+
+  createInvitation: async (data: { email: string; companyId: string; role: string }) => {
+    try {
+      const response = await api.post<Invitation>(`/companies/${data.companyId}/invitations`, {
+        email: data.email,
+        role: data.role
+      });
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return error;
+      }
+      throw error;
+    }
+  },
+
+  cancelInvitation: async (invitationId: string) => {
+    try {
+      const response = await api.delete(`/invitations/${invitationId}`);
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return error;
+      }
+      throw error;
+    }
   }
 };
 
@@ -190,6 +247,8 @@ export const taskService = {
     description?: string; 
     companyId: string;
     assignedTo?: string;
+    priority?: string;
+    dueDate?: Date | string;
   }) => {
     try {
       const response = await api.post<Task>('/tasks', data);
@@ -206,6 +265,8 @@ export const taskService = {
     title?: string;
     description?: string;
     assignedTo?: string;
+    priority?: string;
+    dueDate?: Date | string;
   }) => {
     try {
       const response = await api.put<Task>(`/tasks/${taskId}`, data);

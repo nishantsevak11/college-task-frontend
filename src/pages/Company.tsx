@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { companyService, taskService, commentService, isApiError, apiService } from '@/services/api';
+import { companyService, taskService, commentService, isApiError } from '@/services/api';
 import {
   Company,
   Task,
@@ -534,7 +534,7 @@ const CompanyPage = () => {
                   'bg-green-50 text-green-600'}`}>
                   {selectedTask.status.replace('_', ' ').toUpperCase()}
                 </Badge>
-                {selectedTask.priority === 'high' && (
+                {selectedTask.priority && selectedTask.priority === 'high' && (
                   <Badge variant="destructive" className="ml-2">High</Badge>
                 )}
               </div>
