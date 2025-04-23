@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
@@ -29,13 +29,17 @@ import {
   CheckCircle2,
   X,
   Mail,
-  ChevronRight,
   Clock,
   FileEdit,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { companyService, taskService, commentService, isApiError } from '@/services/api';
+import { 
+  companyService, 
+  taskService, 
+  commentService, 
+  isApiError 
+} from '@/services/api';
 import {
   Company,
   Task,
@@ -162,7 +166,13 @@ const CompanyPage = () => {
   
   // Create task mutation
   const createTaskMutation = useMutation({
-    mutationFn: (taskData: any) => 
+    mutationFn: (taskData: {
+      title: string;
+      description: string;
+      assignedToId?: string;
+      priority?: string;
+      dueDate?: string;
+    }) => 
       taskService.createTask({
         title: taskData.title,
         description: taskData.description,

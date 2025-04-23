@@ -36,7 +36,11 @@ const CommentSection = ({
       
       <div className="flex gap-3">
         <Avatar className="h-8 w-8 mt-1">
-          <AvatarFallback>{currentUser.firstName.charAt(0)}</AvatarFallback>
+          {currentUser.avatar ? (
+            <AvatarImage src={currentUser.avatar} alt={currentUser.firstName} />
+          ) : (
+            <AvatarFallback>{currentUser.firstName.charAt(0)}</AvatarFallback>
+          )}
         </Avatar>
         <div className="flex-1 space-y-2">
           <Textarea
@@ -62,7 +66,11 @@ const CommentSection = ({
           comments.map(comment => (
             <div key={comment._id} className="flex gap-3 animate-fade-in">
               <Avatar className="h-8 w-8 mt-1">
-                <AvatarFallback>{comment.author?.firstName.charAt(0) || '?'}</AvatarFallback>
+                {comment.author?.avatar ? (
+                  <AvatarImage src={comment.author.avatar} alt={getUserName(comment.author)} />
+                ) : (
+                  <AvatarFallback>{comment.author?.firstName.charAt(0) || '?'}</AvatarFallback>
+                )}
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
