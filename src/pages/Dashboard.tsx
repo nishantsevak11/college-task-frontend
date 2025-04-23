@@ -1,5 +1,6 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -9,9 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { PlusCircle, Building, UserPlus } from 'lucide-react';
-import { Company, currentUser } from '@/types';
+import { getUserInitials } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { api, isApiError } from '@/services/api';
+import { companyService, isApiError } from '@/services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -20,6 +21,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   
   const form = useForm({
     defaultValues: {
@@ -32,11 +34,11 @@ const Dashboard = () => {
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
-      const response = await api.getCompanies();
+      const response = await companyService.getCompanies();
       if (isApiError(response)) {
         toast({
           title: "Error",
-          description: response.error,
+          description: response.message,
           variant: "destructive",
         });
         return [];
@@ -47,7 +49,8 @@ const Dashboard = () => {
   
   // Create company mutation
   const createCompanyMutation = useMutation({
-    mutationFn: api.createCompany,
+    mutationFn: (data: { name: string; description: string }) => 
+      companyService.createCompany(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       form.reset();
@@ -70,6 +73,18 @@ const Dashboard = () => {
   const onCreateCompany = (data: { name: string; description: string }) => {
     createCompanyMutation.mutate(data);
   };
+  
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-10">
+        <Navbar />
+        <div className="max-w-7xl mx-auto pt-24 px-6">
+          <Skeleton className="h-10 w-1/4 mb-4" />
+          <Skeleton className="h-5 w-1/3 mb-8" />
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
@@ -151,14 +166,14 @@ const Dashboard = () => {
           ) : (
             // Actual company cards
             companies.map((company) => (
-              <Card key={company.id} className="overflow-hidden animate-scale-in glass-card">
+              <Card key={company._id} className="overflow-hidden animate-scale-in glass-card">
                 <CardHeader className="bg-slate-50">
                   <CardTitle className="flex items-center gap-2">
                     <Building className="h-5 w-5" />
                     {company.name}
                   </CardTitle>
                   <CardDescription>
-                    Created on {company.createdAt.toLocaleDateString()}
+                    Created on {new Date(company.createdAt).toLocaleDateString()}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -166,12 +181,16 @@ const Dashboard = () => {
                     {company.description}
                   </p>
                   <div className="flex -space-x-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
-                      JD
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs">
-                      AB
-                    </div>
+                    {company.members.slice(0, 2).map(member => (
+                      <div key={member.user._id} className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
+                        {getUserInitials(member.user)}
+                      </div>
+                    ))}
+                    {company.members.length > 2 && (
+                      <div className="w-8 h-8 rounded-full border-2 border-white bg-white flex items-center justify-center">
+                        <span className="text-xs text-gray-500">+{company.members.length - 2}</span>
+                      </div>
+                    )}
                     <div className="w-8 h-8 rounded-full border-2 border-white bg-white flex items-center justify-center">
                       <UserPlus className="h-4 w-4 text-gray-400" />
                     </div>
@@ -181,7 +200,7 @@ const Dashboard = () => {
                   <Button 
                     variant="outline" 
                     className="gap-2"
-                    onClick={() => navigate(`/company/${company.id}`)}
+                    onClick={() => navigate(`/company/${company._id}`)}
                   >
                     View Company
                   </Button>

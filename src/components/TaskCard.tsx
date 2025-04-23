@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Task, TaskStatus, User } from '@/types';
+import { Task, TaskStatus, User, getUserName } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Clock, MessageSquare, AlertCircle } from 'lucide-react';
@@ -26,14 +26,13 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
       case 'todo': return 'bg-blue-50 text-blue-600';
-      case 'in-progress': return 'bg-yellow-50 text-yellow-600';
-      case 'review': return 'bg-purple-50 text-purple-600';
-      case 'done': return 'bg-green-50 text-green-600';
+      case 'in_progress': return 'bg-yellow-50 text-yellow-600';
+      case 'completed': return 'bg-green-50 text-green-600';
       default: return 'bg-gray-50 text-gray-600';
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority: string | undefined) => {
     switch (priority) {
       case 'high': return <Badge variant="destructive" className="ml-2">High</Badge>;
       case 'medium': return <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-600 border-yellow-200">Medium</Badge>;
@@ -43,17 +42,17 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
   };
 
   const handleStatusChange = (value: string) => {
-    onStatusChange(task.id, value as TaskStatus);
+    onStatusChange(task._id, value as TaskStatus);
   };
 
-  const isAssignedToMe = task.assigneeId === currentUser.id;
+  const isAssignedToMe = task.assignedTo && task.assignedTo._id === currentUser._id;
 
   return (
     <div className={`task-card glass-card bg-task-${task.status} animate-scale-in`}>
       <div className="flex justify-between items-start mb-3">
         <div>
           <Badge className={`status-badge ${getStatusColor(task.status)}`}>
-            {task.status.replace('-', ' ').toUpperCase()}
+            {task.status.replace('_', ' ').toUpperCase()}
           </Badge>
           {getPriorityBadge(task.priority)}
         </div>
@@ -64,9 +63,8 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todo">To Do</SelectItem>
-              <SelectItem value="in-progress">In Progress</SelectItem>
-              <SelectItem value="review">Review</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -77,17 +75,17 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
       
       <div className="flex justify-between items-center">
         <div className="flex items-center">
-          {task.assignee && (
+          {task.assignedTo && (
             <Avatar className="h-8 w-8">
-              <AvatarImage src={task.assignee.avatar} />
-              <AvatarFallback>{task.assignee.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={task.assignedTo.avatar} />
+              <AvatarFallback>{task.assignedTo.firstName.charAt(0)}</AvatarFallback>
             </Avatar>
           )}
           
           {task.dueDate && (
             <div className="flex items-center ml-3 text-xs text-gray-500">
               <Clock className="h-3 w-3 mr-1" />
-              {formatDistanceToNow(task.dueDate, { addSuffix: true })}
+              {formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}
             </div>
           )}
         </div>

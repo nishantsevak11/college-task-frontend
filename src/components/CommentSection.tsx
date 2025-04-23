@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Comment, User } from '@/types';
+import { Comment, User, getUserName } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,7 +37,7 @@ const CommentSection = ({
       <div className="flex gap-3">
         <Avatar className="h-8 w-8 mt-1">
           <AvatarImage src={currentUser.avatar} />
-          <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+          <AvatarFallback>{currentUser.firstName.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex-1 space-y-2">
           <Textarea
@@ -61,16 +61,16 @@ const CommentSection = ({
           <p className="text-sm text-gray-500 text-center py-4">No comments yet</p>
         ) : (
           comments.map(comment => (
-            <div key={comment.id} className="flex gap-3 animate-fade-in">
+            <div key={comment._id} className="flex gap-3 animate-fade-in">
               <Avatar className="h-8 w-8 mt-1">
                 <AvatarImage src={comment.author?.avatar} />
-                <AvatarFallback>{comment.author?.name.charAt(0) || '?'}</AvatarFallback>
+                <AvatarFallback>{comment.author?.firstName.charAt(0) || '?'}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">{comment.author?.name}</span>
+                  <span className="font-medium text-sm">{getUserName(comment.author)}</span>
                   <span className="text-xs text-gray-500">
-                    {format(comment.createdAt, 'MMM d, yyyy • h:mm a')}
+                    {format(new Date(comment.createdAt), 'MMM d, yyyy • h:mm a')}
                   </span>
                 </div>
                 <div className="text-sm bg-secondary p-3 rounded-md">

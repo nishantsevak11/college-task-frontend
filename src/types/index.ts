@@ -73,6 +73,15 @@ export type AuthResponse = {
   token: string;
 };
 
+// Helper functions to get user name and display name
+export const getUserName = (user: User): string => {
+  return `${user.firstName} ${user.lastName}`;
+};
+
+export const getUserInitials = (user: User): string => {
+  return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+};
+
 // For backward compatibility during transition - to be removed later
 export const mockCompanies: any[] = [];
 export const mockEmployees: any[] = [];

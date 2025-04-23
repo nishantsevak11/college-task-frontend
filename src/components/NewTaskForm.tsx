@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Task, User, TaskStatus } from '@/types';
+import { Task, User, TaskStatus, getUserName } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils';
 
 type NewTaskFormProps = {
   companyId: string;
-  onCreateTask: (task: Omit<Task, 'id' | 'createdAt' | 'assignee' | 'createdBy'>) => void;
+  onCreateTask: (task: Omit<Task, '_id' | 'createdAt' | 'assignedTo' | 'createdBy'>) => void;
   employees: User[];
   currentUser: User;
   isCreating?: boolean;
@@ -52,7 +52,7 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
       title: '',
       description: '',
       status: 'todo' as TaskStatus,
-      assigneeId: '',
+      assignedToId: '',
       priority: 'medium' as 'low' | 'medium' | 'high',
     },
   });
@@ -60,8 +60,8 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
   const onSubmit = (data: any) => {
     onCreateTask({
       ...data,
-      companyId,
-      createdById: currentUser.id,
+      company: companyId,
+      createdById: currentUser._id,
       dueDate: date,
     });
     form.reset();
@@ -121,7 +121,7 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="assigneeId"
+                name="assignedToId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assignee</FormLabel>
@@ -136,8 +136,8 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
                       </FormControl>
                       <SelectContent>
                         {employees.map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            {employee.name}
+                          <SelectItem key={employee._id} value={employee._id}>
+                            {getUserName(employee)}
                           </SelectItem>
                         ))}
                       </SelectContent>

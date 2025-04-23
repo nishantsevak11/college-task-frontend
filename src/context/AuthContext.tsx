@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService, userService } from '@/services/api';
+import { authService, userService, isApiError } from '@/services/api';
 import { User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       const userData = await userService.getCurrentUser();
-      if (!userService.isApiError(userData)) {
+      if (!isApiError(userData)) {
         setUser(userData);
         return true;
       } else {

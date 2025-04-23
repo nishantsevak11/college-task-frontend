@@ -7,6 +7,7 @@ import {
   Comment, 
   Invitation, 
   TaskStatus,
+  AuthResponse
 } from '@/types';
 
 // API base URL
@@ -53,7 +54,7 @@ const handleApiError = (error: any): ApiErrorResponse => {
 export const authService = {
   register: async (userData: { email: string; password: string; firstName: string; lastName: string }) => {
     try {
-      const response = await api.post('/auth/register', userData);
+      const response = await api.post<AuthResponse>('/auth/register', userData);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -62,7 +63,7 @@ export const authService = {
 
   login: async (credentials: { email: string; password: string }) => {
     try {
-      const response = await api.post('/auth/login', credentials);
+      const response = await api.post<AuthResponse>('/auth/login', credentials);
       localStorage.setItem('authToken', response.data.token);
       return response.data;
     } catch (error) {
@@ -81,26 +82,30 @@ export const authService = {
     } catch (error) {
       return handleApiError(error);
     }
-  }
+  },
+
+  isApiError
 };
 
 // User services
 export const userService = {
   getCurrentUser: async () => {
     try {
-      const response = await api.get('/users/current');
+      const response = await api.get<User>('/users/current');
       return response.data;
     } catch (error) {
       return handleApiError(error);
     }
-  }
+  },
+  
+  isApiError
 };
 
 // Company services
 export const companyService = {
   getCompanies: async () => {
     try {
-      const response = await api.get('/companies');
+      const response = await api.get<Company[]>('/companies');
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -109,7 +114,7 @@ export const companyService = {
 
   getCompany: async (id: string) => {
     try {
-      const response = await api.get(`/companies/${id}`);
+      const response = await api.get<Company>(`/companies/${id}`);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -118,7 +123,7 @@ export const companyService = {
 
   createCompany: async (data: { name: string; description?: string }) => {
     try {
-      const response = await api.post('/companies', data);
+      const response = await api.post<Company>('/companies', data);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -127,7 +132,7 @@ export const companyService = {
 
   updateCompany: async (id: string, data: { name: string; description?: string }) => {
     try {
-      const response = await api.put(`/companies/${id}`, data);
+      const response = await api.put<Company>(`/companies/${id}`, data);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -141,14 +146,61 @@ export const companyService = {
     } catch (error) {
       return handleApiError(error);
     }
-  }
+  },
+  
+  // Employee services (part of company)
+  getEmployees: async (companyId: string) => {
+    try {
+      // This endpoint is not explicitly mentioned in the API docs,
+      // but we can get company members from the company details
+      const response = await api.get<Company>(`/companies/${companyId}`);
+      return response.data.members.map(member => ({
+        ...member.user,
+        role: member.role
+      }));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+  
+  // Invitation services
+  getInvitations: async (companyId: string) => {
+    try {
+      // This endpoint is not explicitly mentioned in the API docs,
+      // but we're assuming it exists based on the functionality
+      const response = await api.get<Invitation[]>(`/companies/${companyId}/invitations`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+  
+  createInvitation: async (data: { email: string; companyId: string; role: string }) => {
+    try {
+      const response = await api.post<Invitation>(`/companies/${data.companyId}/invitations`, data);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+  
+  cancelInvitation: async (invitationId: string) => {
+    try {
+      const response = await api.delete(`/invitations/${invitationId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+  
+  isApiError
 };
 
 // Task services
 export const taskService = {
   getTasks: async (companyId: string) => {
     try {
-      const response = await api.get(`/tasks/company/${companyId}`);
+      const response = await api.get<Task[]>(`/tasks/company/${companyId}`);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -157,7 +209,7 @@ export const taskService = {
 
   getTask: async (taskId: string) => {
     try {
-      const response = await api.get(`/tasks/${taskId}`);
+      const response = await api.get<Task>(`/tasks/${taskId}`);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -173,7 +225,7 @@ export const taskService = {
     dueDate?: Date;
   }) => {
     try {
-      const response = await api.post('/tasks', data);
+      const response = await api.post<Task>('/tasks', data);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -188,16 +240,16 @@ export const taskService = {
     dueDate?: Date;
   }) => {
     try {
-      const response = await api.put(`/tasks/${taskId}`, data);
+      const response = await api.put<Task>(`/tasks/${taskId}`, data);
       return response.data;
     } catch (error) {
       return handleApiError(error);
     }
   },
 
-  updateTaskStatus: async (taskId: string, status: string) => {
+  updateTaskStatus: async (taskId: string, status: TaskStatus) => {
     try {
-      const response = await api.patch(`/tasks/${taskId}/status`, { status });
+      const response = await api.patch<Task>(`/tasks/${taskId}/status`, { status });
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -211,14 +263,16 @@ export const taskService = {
     } catch (error) {
       return handleApiError(error);
     }
-  }
+  },
+  
+  isApiError
 };
 
 // Comment services
 export const commentService = {
   getComments: async (taskId: string) => {
     try {
-      const response = await api.get(`/comments/task/${taskId}`);
+      const response = await api.get<Comment[]>(`/comments/task/${taskId}`);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -227,7 +281,7 @@ export const commentService = {
 
   createComment: async (data: { content: string; taskId: string }) => {
     try {
-      const response = await api.post('/comments', data);
+      const response = await api.post<Comment>('/comments', data);
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -236,7 +290,7 @@ export const commentService = {
 
   updateComment: async (commentId: string, content: string) => {
     try {
-      const response = await api.put(`/comments/${commentId}`, { content });
+      const response = await api.put<Comment>(`/comments/${commentId}`, { content });
       return response.data;
     } catch (error) {
       return handleApiError(error);
@@ -250,7 +304,18 @@ export const commentService = {
     } catch (error) {
       return handleApiError(error);
     }
-  }
+  },
+  
+  isApiError
+};
+
+// Export services object for direct usage
+export const apiService = {
+  auth: authService,
+  user: userService,
+  company: companyService,
+  task: taskService,
+  comment: commentService
 };
 
 export { api };

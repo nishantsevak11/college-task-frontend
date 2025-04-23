@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import TaskCard from '@/components/TaskCard';
 import NewTaskForm from '@/components/NewTaskForm';
@@ -33,14 +35,14 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, isApiError } from '@/services/api';
+import { companyService, taskService, commentService, isApiError, apiService } from '@/services/api';
 import {
   Company,
   Task,
   TaskStatus,
   Comment,
   Invitation,
-  currentUser
+  getUserName
 } from '@/types';
 
 const CompanyPage = () => {
@@ -48,6 +50,7 @@ const CompanyPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
@@ -59,9 +62,9 @@ const CompanyPage = () => {
     queryKey: ['company', id],
     queryFn: async () => {
       if (!id) return null;
-      const response = await api.getCompany(id);
+      const response = await companyService.getCompany(id);
       if (isApiError(response)) {
-        throw new Error(response.error);
+        throw new Error(response.message);
       }
       return response;
     },
@@ -79,9 +82,10 @@ const CompanyPage = () => {
   
   // Fetch employees
   const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
+    queryKey: ['employees', id],
     queryFn: async () => {
-      const response = await api.getEmployees();
+      if (!id) return [];
+      const response = await companyService.getEmployees(id);
       if (isApiError(response)) {
         toast({
           title: "Error",
@@ -91,7 +95,8 @@ const CompanyPage = () => {
         return [];
       }
       return response;
-    }
+    },
+    enabled: !!id
   });
   
   // Fetch tasks
@@ -99,7 +104,7 @@ const CompanyPage = () => {
     queryKey: ['tasks', id],
     queryFn: async () => {
       if (!id) return [];
-      const response = await api.getTasks(id);
+      const response = await taskService.getTasks(id);
       if (isApiError(response)) {
         toast({
           title: "Error",
@@ -118,7 +123,7 @@ const CompanyPage = () => {
     queryKey: ['invitations', id],
     queryFn: async () => {
       if (!id) return [];
-      const response = await api.getInvitations(id);
+      const response = await companyService.getInvitations(id);
       if (isApiError(response)) {
         return [];
       }
@@ -131,7 +136,7 @@ const CompanyPage = () => {
   const { data: comments = [] } = useQuery({
     queryKey: ['comments'],
     queryFn: async () => {
-      const promises = tasks.map(task => api.getComments(task.id));
+      const promises = tasks.map(task => commentService.getComments(task._id));
       const responses = await Promise.all(promises);
       const allComments = responses.flatMap(response => {
         if (isApiError(response)) return [];
@@ -145,7 +150,7 @@ const CompanyPage = () => {
   // Task status mutation
   const updateTaskStatusMutation = useMutation({
     mutationFn: ({ taskId, newStatus }: { taskId: string; newStatus: TaskStatus }) => 
-      api.updateTaskStatus(taskId, newStatus),
+      taskService.updateTaskStatus(taskId, newStatus),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', id] });
       toast({
@@ -157,8 +162,15 @@ const CompanyPage = () => {
   
   // Create task mutation
   const createTaskMutation = useMutation({
-    mutationFn: (taskData: Omit<Task, 'id' | 'createdAt' | 'assignee' | 'createdBy'>) => 
-      api.createTask(taskData),
+    mutationFn: (taskData: any) => 
+      taskService.createTask({
+        title: taskData.title,
+        description: taskData.description,
+        companyId: id || '',
+        assignedTo: taskData.assignedToId,
+        priority: taskData.priority,
+        dueDate: taskData.dueDate
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', id] });
       toast({
@@ -171,10 +183,9 @@ const CompanyPage = () => {
   // Create comment mutation
   const createCommentMutation = useMutation({
     mutationFn: ({ taskId, content }: { taskId: string; content: string }) => 
-      api.createComment({
+      commentService.createComment({
         taskId,
-        content,
-        authorId: currentUser.id
+        content
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] });
@@ -189,7 +200,7 @@ const CompanyPage = () => {
   const createInvitationMutation = useMutation({
     mutationFn: (email: string) => {
       if (!id) throw new Error("Company ID not found");
-      return api.createInvitation({
+      return companyService.createInvitation({
         email,
         companyId: id,
         role: 'member'
@@ -208,7 +219,7 @@ const CompanyPage = () => {
   
   // Cancel invitation mutation
   const cancelInvitationMutation = useMutation({
-    mutationFn: (invitationId: string) => api.cancelInvitation(invitationId),
+    mutationFn: (invitationId: string) => companyService.cancelInvitation(invitationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations', id] });
       toast({
@@ -223,7 +234,7 @@ const CompanyPage = () => {
   );
   
   const taskComments = selectedTask
-    ? comments.filter(comment => comment.taskId === selectedTask.id)
+    ? comments.filter(comment => comment.task === selectedTask._id)
     : [];
   
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
@@ -234,7 +245,7 @@ const CompanyPage = () => {
     createCommentMutation.mutate({ taskId, content });
   };
   
-  const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'assignee' | 'createdBy'>) => {
+  const handleCreateTask = (taskData: any) => {
     createTaskMutation.mutate(taskData);
   };
   
@@ -247,7 +258,7 @@ const CompanyPage = () => {
     cancelInvitationMutation.mutate(invitationId);
   };
   
-  if (isLoadingCompany && !company) {
+  if (isLoadingCompany && !company || !currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 pb-10">
         <Navbar />
@@ -316,7 +327,7 @@ const CompanyPage = () => {
               </DialogContent>
             </Dialog>
             <NewTaskForm
-              companyId={company.id}
+              companyId={company._id}
               onCreateTask={handleCreateTask}
               employees={employees}
               currentUser={currentUser}
@@ -357,25 +368,18 @@ const CompanyPage = () => {
                       To Do
                     </Button>
                     <Button 
-                      variant={taskFilter === 'in-progress' ? 'default' : 'outline'} 
+                      variant={taskFilter === 'in_progress' ? 'default' : 'outline'} 
                       size="sm"
-                      onClick={() => setTaskFilter('in-progress')}
+                      onClick={() => setTaskFilter('in_progress')}
                     >
                       In Progress
                     </Button>
                     <Button 
-                      variant={taskFilter === 'review' ? 'default' : 'outline'} 
+                      variant={taskFilter === 'completed' ? 'default' : 'outline'} 
                       size="sm"
-                      onClick={() => setTaskFilter('review')}
+                      onClick={() => setTaskFilter('completed')}
                     >
-                      Review
-                    </Button>
-                    <Button 
-                      variant={taskFilter === 'done' ? 'default' : 'outline'} 
-                      size="sm"
-                      onClick={() => setTaskFilter('done')}
-                    >
-                      Done
+                      Completed
                     </Button>
                   </div>
                 </div>
@@ -400,7 +404,7 @@ const CompanyPage = () => {
                         : `There are no tasks with "${taskFilter}" status.`}
                     </p>
                     <NewTaskForm
-                      companyId={company.id}
+                      companyId={company._id}
                       onCreateTask={handleCreateTask}
                       employees={employees}
                       currentUser={currentUser}
@@ -411,7 +415,7 @@ const CompanyPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {filteredTasks.map(task => (
                       <TaskCard
-                        key={task.id}
+                        key={task._id}
                         task={task}
                         onStatusChange={handleStatusChange}
                         onOpenTask={setSelectedTask}
@@ -429,19 +433,19 @@ const CompanyPage = () => {
                     <h3 className="text-lg font-medium">Team Members</h3>
                   </div>
                   <div className="divide-y divide-gray-200">
-                    {employees.map(employee => (
-                      <div key={employee.id} className="flex items-center justify-between p-4">
+                    {company.members.map(member => (
+                      <div key={member.user._id} className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                            {employee.name.charAt(0)}
+                            {member.user.firstName.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-medium">{employee.name}</p>
-                            <p className="text-sm text-gray-500">{employee.email}</p>
+                            <p className="font-medium">{getUserName(member.user)}</p>
+                            <p className="text-sm text-gray-500">{member.user.email}</p>
                           </div>
                         </div>
-                        <Badge variant={employee.role === 'admin' ? 'default' : 'outline'}>
-                          {employee.role === 'admin' ? 'Admin' : 'Member'}
+                        <Badge variant={member.role === 'admin' ? 'default' : 'outline'}>
+                          {member.role === 'admin' ? 'Admin' : 'Member'}
                         </Badge>
                       </div>
                     ))}
@@ -454,7 +458,7 @@ const CompanyPage = () => {
                       </div>
                       <div className="divide-y divide-gray-200">
                         {invitations.map(invitation => (
-                          <div key={invitation.id} className="flex items-center justify-between p-4">
+                          <div key={invitation._id} className="flex items-center justify-between p-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
                                 <Mail className="h-5 w-5 text-yellow-600" />
@@ -471,7 +475,7 @@ const CompanyPage = () => {
                               variant="ghost" 
                               size="sm" 
                               className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleCancelInvitation(invitation.id)}
+                              onClick={() => handleCancelInvitation(invitation._id)}
                               disabled={cancelInvitationMutation.isPending}
                             >
                               <X className="h-4 w-4" />
@@ -490,16 +494,16 @@ const CompanyPage = () => {
             <h3 className="font-medium text-lg mb-4">Activity</h3>
             <div className="space-y-4">
               {[...comments]
-                .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 5)
                 .map(comment => (
-                  <div key={comment.id} className="flex gap-3 text-sm">
+                  <div key={comment._id} className="flex gap-3 text-sm">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center">
-                      {comment.author?.name.charAt(0)}
+                      {comment.author?.firstName.charAt(0)}
                     </div>
                     <div>
                       <p>
-                        <span className="font-medium">{comment.author?.name}</span>{' '}
+                        <span className="font-medium">{getUserName(comment.author)}</span>{' '}
                         commented on a task
                       </p>
                       <p className="text-gray-500 text-xs mt-1">
@@ -526,10 +530,9 @@ const CompanyPage = () => {
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <Badge className={`status-badge ${selectedTask.status === 'todo' ? 'bg-blue-50 text-blue-600' : 
-                  selectedTask.status === 'in-progress' ? 'bg-yellow-50 text-yellow-600' : 
-                  selectedTask.status === 'review' ? 'bg-purple-50 text-purple-600' : 
+                  selectedTask.status === 'in_progress' ? 'bg-yellow-50 text-yellow-600' : 
                   'bg-green-50 text-green-600'}`}>
-                  {selectedTask.status.replace('-', ' ').toUpperCase()}
+                  {selectedTask.status.replace('_', ' ').toUpperCase()}
                 </Badge>
                 {selectedTask.priority === 'high' && (
                   <Badge variant="destructive" className="ml-2">High</Badge>
@@ -537,7 +540,7 @@ const CompanyPage = () => {
               </div>
               <DialogTitle className="text-xl mt-2">{selectedTask.title}</DialogTitle>
               <DialogDescription>
-                Created by {selectedTask.createdBy?.name} on {new Date(selectedTask.createdAt).toLocaleDateString()}
+                Created by {getUserName(selectedTask.createdBy)} on {new Date(selectedTask.createdAt).toLocaleDateString()}
               </DialogDescription>
             </DialogHeader>
             
@@ -554,9 +557,11 @@ const CompanyPage = () => {
                   <h4 className="text-sm font-medium mb-1">Assignee</h4>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">
-                      {selectedTask.assignee?.name.charAt(0)}
+                      {selectedTask.assignedTo ? selectedTask.assignedTo.firstName.charAt(0) : '-'}
                     </div>
-                    <span className="text-sm">{selectedTask.assignee?.name}</span>
+                    <span className="text-sm">
+                      {selectedTask.assignedTo ? getUserName(selectedTask.assignedTo) : 'Unassigned'}
+                    </span>
                   </div>
                 </div>
                 
@@ -573,7 +578,7 @@ const CompanyPage = () => {
               
               <CommentSection
                 comments={taskComments}
-                taskId={selectedTask.id}
+                taskId={selectedTask._id}
                 currentUser={currentUser}
                 onAddComment={handleAddComment}
                 isSubmitting={createCommentMutation.isPending}
