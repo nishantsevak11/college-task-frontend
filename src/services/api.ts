@@ -1,7 +1,5 @@
 
-// This is a mock API service that will be replaced with real API calls later
-// Currently using the mock data, but structured like real API calls
-
+import axios from 'axios';
 import { 
   Company, 
   Task, 
@@ -9,179 +7,250 @@ import {
   Comment, 
   Invitation, 
   TaskStatus,
-  mockCompanies,
-  mockEmployees,
-  mockTasks,
-  mockComments,
-  mockInvitations,
-  currentUser
 } from '@/types';
 
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// API base URL
+const API_URL = 'http://localhost:3000/api';
 
-// API error response type
+// Create axios instance
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add authentication interceptor
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export interface ApiErrorResponse {
-  error: string;
+  message: string;
   status: number;
 }
 
-// Generic API response type
-export type ApiResponse<T> = T | ApiErrorResponse;
-
-// Helper to check if response is an error
-export const isApiError = (response: any): response is ApiErrorResponse => {
-  return response && typeof response === 'object' && 'error' in response;
+export const isApiError = (error: any): error is ApiErrorResponse => {
+  return error && typeof error === 'object' && 'message' in error;
 };
 
-export const api = {
-  // Authentication
-  getCurrentUser: async (): Promise<ApiResponse<User>> => {
-    await delay(300);
-    return { ...currentUser };
-  },
-
-  // Companies
-  getCompanies: async (): Promise<ApiResponse<Company[]>> => {
-    await delay(500);
-    return [...mockCompanies];
-  },
-
-  getCompany: async (id: string): Promise<ApiResponse<Company | null>> => {
-    await delay(300);
-    const company = mockCompanies.find(c => c.id === id);
-    if (!company) {
-      return { error: 'Company not found', status: 404 };
-    }
-    return { ...company };
-  },
-
-  createCompany: async (data: Omit<Company, 'id' | 'createdAt' | 'ownerId'>): Promise<ApiResponse<Company>> => {
-    await delay(600);
-    const newCompany: Company = {
-      id: Date.now().toString(),
-      name: data.name,
-      description: data.description,
-      ownerId: currentUser.id,
-      createdAt: new Date(),
-      logo: data.logo
-    };
-    
-    mockCompanies.push(newCompany);
-    return { ...newCompany };
-  },
-
-  // Tasks
-  getTasks: async (companyId: string): Promise<ApiResponse<Task[]>> => {
-    await delay(500);
-    return mockTasks
-      .filter(task => task.companyId === companyId)
-      .map(task => ({
-        ...task,
-        assignee: mockEmployees.find(emp => emp.id === task.assigneeId),
-        createdBy: mockEmployees.find(emp => emp.id === task.createdById)
-      }));
-  },
-
-  getTask: async (taskId: string): Promise<ApiResponse<Task | null>> => {
-    await delay(300);
-    const task = mockTasks.find(t => t.id === taskId);
-    if (!task) {
-      return { error: 'Task not found', status: 404 };
-    }
+// Error handler helper
+const handleApiError = (error: any): ApiErrorResponse => {
+  if (axios.isAxiosError(error)) {
     return {
-      ...task,
-      assignee: mockEmployees.find(emp => emp.id === task.assigneeId),
-      createdBy: mockEmployees.find(emp => emp.id === task.createdById)
+      message: error.response?.data?.message || 'An unexpected error occurred',
+      status: error.response?.status || 500
     };
-  },
+  }
+  return { message: 'An unexpected error occurred', status: 500 };
+};
 
-  createTask: async (data: Omit<Task, 'id' | 'createdAt' | 'assignee' | 'createdBy'>): Promise<ApiResponse<Task>> => {
-    await delay(600);
-    const newTask: Task = {
-      ...data,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      assignee: mockEmployees.find(emp => emp.id === data.assigneeId),
-      createdBy: mockEmployees.find(emp => emp.id === data.createdById)
-    };
-    
-    mockTasks.push(newTask);
-    return { ...newTask };
-  },
-
-  updateTaskStatus: async (taskId: string, status: TaskStatus): Promise<ApiResponse<Task>> => {
-    await delay(400);
-    const taskIndex = mockTasks.findIndex(t => t.id === taskId);
-    if (taskIndex === -1) {
-      return { error: 'Task not found', status: 404 };
+// Auth services
+export const authService = {
+  register: async (userData: { email: string; password: string; firstName: string; lastName: string }) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
     }
-    
-    mockTasks[taskIndex].status = status;
-    
-    return {
-      ...mockTasks[taskIndex],
-      assignee: mockEmployees.find(emp => emp.id === mockTasks[taskIndex].assigneeId),
-      createdBy: mockEmployees.find(emp => emp.id === mockTasks[taskIndex].createdById)
-    };
   },
 
-  // Comments
-  getComments: async (taskId: string): Promise<ApiResponse<Comment[]>> => {
-    await delay(400);
-    return mockComments
-      .filter(comment => comment.taskId === taskId)
-      .map(comment => ({
-        ...comment,
-        author: mockEmployees.find(emp => emp.id === comment.authorId)
-      }));
-  },
-
-  createComment: async (data: Omit<Comment, 'id' | 'createdAt' | 'author'>): Promise<ApiResponse<Comment>> => {
-    await delay(500);
-    const newComment: Comment = {
-      ...data,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      author: mockEmployees.find(emp => emp.id === data.authorId)
-    };
-    
-    mockComments.push(newComment);
-    return { ...newComment };
-  },
-
-  // Team Management
-  getEmployees: async (): Promise<ApiResponse<User[]>> => {
-    await delay(400);
-    return [...mockEmployees];
-  },
-
-  getInvitations: async (companyId: string): Promise<ApiResponse<Invitation[]>> => {
-    await delay(300);
-    return mockInvitations.filter(inv => inv.companyId === companyId);
-  },
-
-  createInvitation: async (data: Omit<Invitation, 'id' | 'createdAt' | 'status'>): Promise<ApiResponse<Invitation>> => {
-    await delay(600);
-    const newInvitation: Invitation = {
-      ...data,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      status: 'pending'
-    };
-    
-    mockInvitations.push(newInvitation);
-    return { ...newInvitation };
-  },
-
-  cancelInvitation: async (invitationId: string): Promise<ApiResponse<{ success: boolean }>> => {
-    await delay(400);
-    const invIndex = mockInvitations.findIndex(inv => inv.id === invitationId);
-    if (invIndex === -1) {
-      return { error: 'Invitation not found', status: 404 };
+  login: async (credentials: { email: string; password: string }) => {
+    try {
+      const response = await api.post('/auth/login', credentials);
+      localStorage.setItem('authToken', response.data.token);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
     }
-    
-    mockInvitations.splice(invIndex, 1);
-    return { success: true };
+  },
+
+  logout: () => {
+    localStorage.removeItem('authToken');
+  },
+
+  resetPassword: async (email: string) => {
+    try {
+      const response = await api.post('/auth/reset-password', { email });
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
   }
 };
+
+// User services
+export const userService = {
+  getCurrentUser: async () => {
+    try {
+      const response = await api.get('/users/current');
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+};
+
+// Company services
+export const companyService = {
+  getCompanies: async () => {
+    try {
+      const response = await api.get('/companies');
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  getCompany: async (id: string) => {
+    try {
+      const response = await api.get(`/companies/${id}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  createCompany: async (data: { name: string; description?: string }) => {
+    try {
+      const response = await api.post('/companies', data);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  updateCompany: async (id: string, data: { name: string; description?: string }) => {
+    try {
+      const response = await api.put(`/companies/${id}`, data);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  deleteCompany: async (id: string) => {
+    try {
+      const response = await api.delete(`/companies/${id}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+};
+
+// Task services
+export const taskService = {
+  getTasks: async (companyId: string) => {
+    try {
+      const response = await api.get(`/tasks/company/${companyId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  getTask: async (taskId: string) => {
+    try {
+      const response = await api.get(`/tasks/${taskId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  createTask: async (data: { 
+    title: string; 
+    description?: string; 
+    companyId: string; 
+    assignedTo?: string;
+    priority?: string;
+    dueDate?: Date;
+  }) => {
+    try {
+      const response = await api.post('/tasks', data);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  updateTask: async (taskId: string, data: {
+    title?: string;
+    description?: string;
+    assignedTo?: string;
+    priority?: string;
+    dueDate?: Date;
+  }) => {
+    try {
+      const response = await api.put(`/tasks/${taskId}`, data);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  updateTaskStatus: async (taskId: string, status: string) => {
+    try {
+      const response = await api.patch(`/tasks/${taskId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  deleteTask: async (taskId: string) => {
+    try {
+      const response = await api.delete(`/tasks/${taskId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+};
+
+// Comment services
+export const commentService = {
+  getComments: async (taskId: string) => {
+    try {
+      const response = await api.get(`/comments/task/${taskId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  createComment: async (data: { content: string; taskId: string }) => {
+    try {
+      const response = await api.post('/comments', data);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  updateComment: async (commentId: string, content: string) => {
+    try {
+      const response = await api.put(`/comments/${commentId}`, { content });
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  deleteComment: async (commentId: string) => {
+    try {
+      const response = await api.delete(`/comments/${commentId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+};
+
+export { api };
