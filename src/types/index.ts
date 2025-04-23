@@ -1,4 +1,5 @@
 
+
 export type User = {
   _id: string;
   firstName: string;
@@ -73,3 +74,4 @@ export const getUserName = (user: User): string => {
 export const getUserInitials = (user: User): string => {
   return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
 };
+
