@@ -5,7 +5,6 @@ export type User = {
   lastName: string;
   email: string;
   role?: string;
-  avatar?: string;
 };
 
 export type CompanyMember = {
@@ -17,10 +16,8 @@ export type Company = {
   _id: string;
   name: string;
   description?: string;
-  logo?: string;
   owner: User;
   members: CompanyMember[];
-  createdAt: Date;
 };
 
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
@@ -33,10 +30,8 @@ export type Task = {
   company: string;
   assignedTo?: User;
   createdBy: User;
-  createdAt: Date;
-  updatedAt: Date;
-  priority?: 'low' | 'medium' | 'high';
-  dueDate?: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Comment = {
@@ -44,28 +39,8 @@ export type Comment = {
   content: string;
   task: string;
   author: User;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type Invitation = {
-  _id: string;
-  email: string;
-  companyId: string;
-  status: 'pending' | 'accepted' | 'declined';
-  role: string;
-  createdAt: Date;
-};
-
-export type UserWithCompanies = User & {
-  companies: {
-    company: {
-      _id: string;
-      name: string;
-      description: string;
-    };
-    role: string;
-  }[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AuthResponse = {
@@ -73,7 +48,7 @@ export type AuthResponse = {
   token: string;
 };
 
-// Helper functions to get user name and display name
+// Helper functions
 export const getUserName = (user: User): string => {
   return `${user.firstName} ${user.lastName}`;
 };
@@ -81,11 +56,3 @@ export const getUserName = (user: User): string => {
 export const getUserInitials = (user: User): string => {
   return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
 };
-
-// For backward compatibility during transition - to be removed later
-export const mockCompanies: any[] = [];
-export const mockEmployees: any[] = [];
-export const mockTasks: any[] = [];
-export const mockComments: any[] = [];
-export const mockInvitations: any[] = [];
-export const currentUser: any = {};
