@@ -77,7 +77,11 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
         <div className="flex items-center">
           {task.assignedTo && (
             <Avatar className="h-8 w-8">
-              <AvatarFallback>{task.assignedTo.firstName.charAt(0)}</AvatarFallback>
+              {task.assignedTo.avatar ? (
+                <AvatarImage src={task.assignedTo.avatar} alt={getUserName(task.assignedTo)} />
+              ) : (
+                <AvatarFallback>{task.assignedTo.firstName.charAt(0)}</AvatarFallback>
+              )}
             </Avatar>
           )}
           

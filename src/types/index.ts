@@ -5,8 +5,7 @@ export type User = {
   lastName: string;
   email: string;
   role?: string;
-  // Added for UI compatibility - can be empty string if not available
-  avatar?: string;
+  avatar?: string; // Added for UI compatibility
 };
 
 export type CompanyMember = {
