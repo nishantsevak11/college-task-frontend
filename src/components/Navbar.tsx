@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, Plus, LogOut } from 'lucide-react';
+import NotificationsDropdown from './NotificationsDropdown';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,10 +24,10 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
             <Link to="/dashboard" className="text-gray-700 hover:text-gray-900 transition-colors">Dashboard</Link>
             <Link to="/companies" className="text-gray-700 hover:text-gray-900 transition-colors">Companies</Link>
+            <NotificationsDropdown />
             {isHome ? (
               <Link to="/dashboard">
                 <Button>Get Started</Button>
@@ -40,7 +40,6 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile menu button */}
           <div className="md:hidden">
             <button 
               onClick={toggleMenu}
@@ -55,7 +54,6 @@ const Navbar = () => {
           </div>
         </div>
         
-        {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden animate-fade-in">
             <div className="px-2 pt-2 pb-3 space-y-1 mt-3 bg-white rounded-md shadow-lg">

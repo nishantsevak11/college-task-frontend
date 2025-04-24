@@ -260,6 +260,18 @@ export const companyService = {
       }
       throw error;
     }
+  },
+
+  getUserInvitations: async () => {
+    try {
+      const response = await api.get<Invitation[]>('/invitations/user');
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return [];
+      }
+      throw error;
+    }
   }
 };
 
