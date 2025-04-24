@@ -1,4 +1,5 @@
 
+
 export type User = {
   _id: string;
   firstName: string;
@@ -57,6 +58,8 @@ export type Invitation = {
   email: string;
   company: string;
   role: string;
+  status?: 'pending' | 'accepted' | 'rejected';
+  invitedBy?: User;
   createdAt: string;
   updatedAt: string;
 };
@@ -74,3 +77,4 @@ export const getUserName = (user: User): string => {
 export const getUserInitials = (user: User): string => {
   return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
 };
+

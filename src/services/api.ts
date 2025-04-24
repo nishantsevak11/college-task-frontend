@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { 
   Company, 
@@ -163,7 +162,6 @@ export const companyService = {
     }
   },
 
-  // Added missing methods for employees and invitations
   getEmployees: async (companyId: string) => {
     try {
       const response = await api.get<User[]>(`/companies/${companyId}/employees`);
@@ -190,8 +188,9 @@ export const companyService = {
 
   createInvitation: async (data: { email: string; companyId: string; role: string }) => {
     try {
-      const response = await api.post<Invitation>(`/companies/${data.companyId}/invitations`, {
+      const response = await api.post<Invitation>('/invitations', {
         email: data.email,
+        companyId: data.companyId,
         role: data.role
       });
       return response.data;
@@ -206,6 +205,54 @@ export const companyService = {
   cancelInvitation: async (invitationId: string) => {
     try {
       const response = await api.delete(`/invitations/${invitationId}`);
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return error;
+      }
+      throw error;
+    }
+  },
+  
+  acceptInvitation: async (invitationId: string) => {
+    try {
+      const response = await api.post(`/invitations/${invitationId}/accept`);
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return error;
+      }
+      throw error;
+    }
+  },
+  
+  rejectInvitation: async (invitationId: string) => {
+    try {
+      const response = await api.post(`/invitations/${invitationId}/reject`);
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return error;
+      }
+      throw error;
+    }
+  },
+  
+  updateMemberRole: async (companyId: string, userId: string, role: string) => {
+    try {
+      const response = await api.patch(`/companies/${companyId}/members/${userId}/role`, { role });
+      return response.data;
+    } catch (error) {
+      if (isApiError(error)) {
+        return error;
+      }
+      throw error;
+    }
+  },
+  
+  removeMember: async (companyId: string, userId: string) => {
+    try {
+      const response = await api.delete(`/companies/${companyId}/members/${userId}`);
       return response.data;
     } catch (error) {
       if (isApiError(error)) {
