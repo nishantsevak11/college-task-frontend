@@ -1,9 +1,8 @@
-
 import { useState } from 'react';
 import { Task, TaskStatus, User, getUserName } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MessageSquare, AlertCircle } from 'lucide-react';
+import { Clock, MessageSquare, Edit, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,11 +17,21 @@ type TaskCardProps = {
   task: Task;
   onStatusChange: (id: string, status: TaskStatus) => void;
   onOpenTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
+  onEditTask: (task: Task) => void;
   currentUser: User;
   isUpdating?: boolean;
 };
 
-const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = false }: TaskCardProps) => {
+const TaskCard = ({ 
+  task, 
+  onStatusChange, 
+  onOpenTask, 
+  onDeleteTask,
+  onEditTask,
+  currentUser, 
+  isUpdating = false 
+}: TaskCardProps) => {
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
       case 'todo': return 'bg-blue-50 text-blue-600';
@@ -46,6 +55,7 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
   };
 
   const isAssignedToMe = task.assignedTo && task.assignedTo._id === currentUser._id;
+  const canModifyTask = isAssignedToMe || task.createdBy._id === currentUser._id;
 
   return (
     <div className={`task-card glass-card bg-task-${task.status} animate-scale-in`}>
@@ -103,6 +113,28 @@ const TaskCard = ({ task, onStatusChange, onOpenTask, currentUser, isUpdating = 
             <MessageSquare className="h-4 w-4 mr-1" />
             <span className="text-xs">3</span>
           </Button>
+
+          {canModifyTask && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => onEditTask(task)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                onClick={() => onDeleteTask(task._id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           
           <Button 
             variant="outline" 
