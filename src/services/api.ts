@@ -10,7 +10,7 @@ import {
 } from '@/types';
 
 // API base URL
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://college-task-apis.onrender.com/api';
 
 // Create axios instance
 const api = axios.create({
