@@ -1,5 +1,4 @@
 
-
 export type User = {
   _id: string;
   firstName: string;
@@ -41,6 +40,7 @@ export type Task = {
   // Added for UI compatibility
   priority?: TaskPriority;
   dueDate?: string;
+  comments?: Array<any>; // Added to fix the error
 };
 
 export type Comment = {
@@ -74,4 +74,3 @@ export const getUserName = (user: User): string => {
 export const getUserInitials = (user: User): string => {
   return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
 };
-
