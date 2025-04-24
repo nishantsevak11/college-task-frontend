@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -60,8 +59,8 @@ const CompanyPage = () => {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
   const [taskFilter, setTaskFilter] = useState<TaskStatus | 'all'>('all');
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   
-  // Fetch company data - fixed version without onSuccess and with meta for error handling
   const { data: company, isLoading: isLoadingCompany, error: companyError } = useQuery({
     queryKey: ['company', id],
     queryFn: async () => {
@@ -84,7 +83,6 @@ const CompanyPage = () => {
     }
   });
   
-  // Fetch employees
   const { data: employees = [] } = useQuery({
     queryKey: ['employees', id],
     queryFn: async () => {
@@ -103,7 +101,6 @@ const CompanyPage = () => {
     enabled: !!id
   });
   
-  // Fetch tasks
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
     queryKey: ['tasks', id],
     queryFn: async () => {
@@ -122,7 +119,6 @@ const CompanyPage = () => {
     enabled: !!id
   });
   
-  // Fetch invitations
   const { data: invitations = [] } = useQuery({
     queryKey: ['invitations', id],
     queryFn: async () => {
@@ -136,7 +132,6 @@ const CompanyPage = () => {
     enabled: !!id
   });
   
-  // Fetch comments
   const { data: comments = [] } = useQuery({
     queryKey: ['comments'],
     queryFn: async () => {
@@ -151,7 +146,6 @@ const CompanyPage = () => {
     enabled: tasks.length > 0
   });
   
-  // Task status mutation
   const updateTaskStatusMutation = useMutation({
     mutationFn: ({ taskId, newStatus }: { taskId: string; newStatus: TaskStatus }) => 
       taskService.updateTaskStatus(taskId, newStatus),
@@ -164,7 +158,6 @@ const CompanyPage = () => {
     }
   });
   
-  // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: (taskData: {
       title: string;
@@ -190,7 +183,6 @@ const CompanyPage = () => {
     }
   });
   
-  // Create comment mutation
   const createCommentMutation = useMutation({
     mutationFn: ({ taskId, content }: { taskId: string; content: string }) => 
       commentService.createComment({
@@ -206,7 +198,6 @@ const CompanyPage = () => {
     }
   });
   
-  // Create invitation mutation
   const createInvitationMutation = useMutation({
     mutationFn: (email: string) => {
       if (!id) throw new Error("Company ID not found");
@@ -227,7 +218,6 @@ const CompanyPage = () => {
     }
   });
   
-  // Cancel invitation mutation
   const cancelInvitationMutation = useMutation({
     mutationFn: (invitationId: string) => companyService.cancelInvitation(invitationId),
     onSuccess: () => {
@@ -235,6 +225,17 @@ const CompanyPage = () => {
       toast({
         title: "Invitation cancelled",
         description: "The invitation has been cancelled.",
+      });
+    }
+  });
+  
+  const deleteTaskMutation = useMutation({
+    mutationFn: (taskId: string) => taskService.deleteTask(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', id] });
+      toast({
+        title: "Task deleted",
+        description: "The task has been deleted successfully.",
       });
     }
   });
@@ -257,6 +258,15 @@ const CompanyPage = () => {
   
   const handleCreateTask = (taskData: any) => {
     createTaskMutation.mutate(taskData);
+  };
+  
+  const handleDeleteTask = (taskId: string) => {
+    deleteTaskMutation.mutate(taskId);
+  };
+  
+  const handleEditTask = (task: Task) => {
+    setTaskToEdit(task);
+    setSelectedTask(task);
   };
   
   const handleInviteEmployee = () => {
@@ -429,6 +439,8 @@ const CompanyPage = () => {
                         task={task}
                         onStatusChange={handleStatusChange}
                         onOpenTask={setSelectedTask}
+                        onDeleteTask={handleDeleteTask}
+                        onEditTask={handleEditTask}
                         currentUser={currentUser}
                         isUpdating={updateTaskStatusMutation.isPending}
                       />
