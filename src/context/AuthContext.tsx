@@ -12,6 +12,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<boolean>;
   logout: () => void;
+  pendingInvitations?: Invitation[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const response = await authService.login({ email, password });
     
     if (!isApiError(response)) {
-      setUser(response.user);
+      setUser({ ...response.user});
       toast({
         title: "Login successful",
         description: `Welcome back, ${response.user.firstName}!`,

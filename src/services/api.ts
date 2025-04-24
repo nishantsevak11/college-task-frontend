@@ -59,6 +59,9 @@ export const authService = {
     try {
       const response = await api.post<AuthResponse>('/auth/login', credentials);
       localStorage.setItem('authToken', response.data.token);
+      localStorage.setItem('pendingInvitations', JSON.stringify(response.data.pendingInvitations));
+      
+      console.log("Login response ", response)
       return response.data;
     } catch (error) {
       if (isApiError(error)) {
@@ -264,7 +267,7 @@ export const companyService = {
 
   getUserInvitations: async () => {
     try {
-      const response = await api.get<Invitation[]>('/invitations/user');
+      const response = await api.get<Invitation[]>('/pending-invitations');
       return response.data;
     } catch (error) {
       if (isApiError(error)) {
