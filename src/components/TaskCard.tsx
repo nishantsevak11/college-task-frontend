@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Task, TaskStatus, User, getUserName } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -55,7 +56,11 @@ const TaskCard = ({
   };
 
   const isAssignedToMe = task.assignedTo && task.assignedTo._id === currentUser._id;
-  const canModifyTask = isAssignedToMe || task.createdBy._id === currentUser._id;
+  const isCreatedByMe = task.createdBy && task.createdBy._id === currentUser._id;
+  const isAdmin = currentUser.role === 'admin';
+  
+  // User can modify if they're admin, the creator, or the task is assigned to them
+  const canModifyTask = isAdmin || isCreatedByMe || isAssignedToMe;
 
   return (
     <div className={`task-card glass-card bg-task-${task.status} animate-scale-in`}>
@@ -111,7 +116,7 @@ const TaskCard = ({
             onClick={() => onOpenTask(task)}
           >
             <MessageSquare className="h-4 w-4 mr-1" />
-            <span className="text-xs">3</span>
+            <span className="text-xs">{task.comments?.length || 0}</span>
           </Button>
 
           {canModifyTask && (
@@ -119,20 +124,24 @@ const TaskCard = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2"
+                className="h-8 px-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                 onClick={() => onEditTask(task)}
+                title="Edit task"
               >
                 <Edit className="h-4 w-4" />
               </Button>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
-                onClick={() => onDeleteTask(task._id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {(isAdmin || isCreatedByMe) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => onDeleteTask(task._id)}
+                  title="Delete task"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </>
           )}
           
