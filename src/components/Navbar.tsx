@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Plus, LogOut } from 'lucide-react';
+import { Menu, X, Plus, LogOut, User } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
+import { useAuth } from '@/context/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const { user, logout } = useAuth();
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -24,61 +34,70 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center space-x-6">
-            <Link to="/dashboard" className="text-gray-700 hover:text-gray-900 transition-colors">Dashboard</Link>
-            <Link to="/companies" className="text-gray-700 hover:text-gray-900 transition-colors">Companies</Link>
-            <NotificationsDropdown />
-            {isHome ? (
-              <Link to="/dashboard">
-                <Button>Get Started</Button>
+          {user ? (
+            <div className="hidden md:flex items-center space-x-6">
+              <Link to="/dashboard" className="text-gray-700 hover:text-gray-900 transition-colors">
+                Dashboard
               </Link>
-            ) : (
-              <Button variant="outline" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                New Task
-              </Button>
-            )}
-          </div>
+              <NotificationsDropdown />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    <span>{user.firstName }</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuItem disabled>
+                    {user.email}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                 
+                  <DropdownMenuItem onClick={logout} className="flex items-center gap-2">
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <Link to="/dashboard">
+              <Button>Get Started</Button>
+            </Link>
+          )}
 
           <div className="md:hidden">
-            <button 
+            <button
               onClick={toggleMenu}
               className="text-gray-500 hover:text-gray-700 focus:outline-none"
             >
-              {isOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
+              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
-        
+
         {isOpen && (
           <div className="md:hidden animate-fade-in">
             <div className="px-2 pt-2 pb-3 space-y-1 mt-3 bg-white rounded-md shadow-lg">
-              <Link 
-                to="/dashboard" 
+              <Link
+                to="/dashboard"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
                 onClick={() => setIsOpen(false)}
               >
                 Dashboard
               </Link>
-              <Link 
-                to="/companies" 
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
-                onClick={() => setIsOpen(false)}
-              >
-                Companies
-              </Link>
-              <Link 
-                to="/logout" 
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                onClick={() => setIsOpen(false)}
+              <NotificationsDropdown />
+              <button
+                onClick={() => {
+                  logout();
+                  setIsOpen(false);
+                }}
+                className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2"
               >
                 <LogOut className="h-4 w-4" />
                 Sign Out
-              </Link>
+              </button>
             </div>
           </div>
         )}

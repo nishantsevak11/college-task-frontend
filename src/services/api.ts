@@ -61,7 +61,7 @@ export const authService = {
       localStorage.setItem('authToken', response.data.token);
       localStorage.setItem('pendingInvitations', JSON.stringify(response.data.pendingInvitations));
       
-      console.log("Login response ", response)
+      // console.log("Login response ", response)
       return response.data;
     } catch (error) {
       if (isApiError(error)) {

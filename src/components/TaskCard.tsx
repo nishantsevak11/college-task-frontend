@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Task, TaskStatus, User, getUserName } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,9 @@ const TaskCard = ({
   currentUser, 
   isUpdating = false 
 }: TaskCardProps) => {
+
+
+
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
       case 'todo': return 'bg-blue-50 text-blue-600';
