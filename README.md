@@ -1,6 +1,8 @@
 # CompanyBuddy - Task Management System
 
-CompanyBuddy is a comprehensive task management application designed for teams to collaborate efficiently on projects with features like task tracking, team management, and real-time updates.
+CompanyBuddy is a comprehensive task management application designed for teams to collaborate efficiently on projects with features like task tracking, team management, and real-time update 
+
+live url - https://college-task-frontend.vercel.app/
 
 ## 📖 Table of Contents
 - [Features](#-key-features)
