@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import Navbar from '@/components/Navbar';
+import Navbar from '@/components/ModernNavbar';
 import TaskCard from '@/components/TaskCard';
 import NewTaskForm from '@/components/NewTaskForm';
 import CommentSection from '@/components/CommentSection';

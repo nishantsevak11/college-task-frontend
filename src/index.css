@@ -1,13 +1,12 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
+
 @layer base {
   :root {
-    --background: 210 40% 98%;
+    --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -16,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222 47% 11%;
+    --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -38,12 +37,19 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
+
     --sidebar-foreground: 240 5.3% 26.1%;
+
     --sidebar-primary: 240 5.9% 10%;
+
     --sidebar-primary-foreground: 0 0% 98%;
+
     --sidebar-accent: 240 4.8% 95.9%;
+
     --sidebar-accent-foreground: 240 5.9% 10%;
+
     --sidebar-border: 220 13% 91%;
+
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -75,7 +81,6 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -97,36 +102,39 @@
     font-family: 'Inter', sans-serif;
   }
 
-  .glass-card {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm;
-  }
-
-  .status-badge {
-    @apply text-xs font-medium px-2 py-1 rounded-full;
-  }
-
-  .task-card {
-    @apply rounded-xl p-5 transition-all duration-300 hover:shadow-md;
-  }
-
-  .page-transition-enter {
-    @apply opacity-0;
-  }
-  
-  .page-transition-enter-active {
-    @apply opacity-100 transition-opacity duration-300;
-  }
-  
-  .page-transition-exit {
-    @apply opacity-100;
-  }
-  
-  .page-transition-exit-active {
-    @apply opacity-0 transition-opacity duration-300;
+  html {
+    scroll-behavior: smooth;
   }
 }
 
+@layer utilities {
+  .glow-text {
+    text-shadow: 0 0 10px currentColor;
+  }
+  
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-3xl border border-white/10;
+  }
+  
+  .neon-glow {
+    box-shadow: 0 0 20px currentColor;
+  }
+}
 
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
 
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
 
+::-webkit-scrollbar-thumb {
+  background: rgba(52, 211, 153, 0.5);
+  border-radius: 4px;
+}
 
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(52, 211, 153, 0.8);
+}

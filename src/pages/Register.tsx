@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import PendingInvitations from '@/components/PendingInvitations';
+import { ArrowLeft, UserPlus } from 'lucide-react';
 
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,114 +29,274 @@ const Register = () => {
     const success = await registerUser(data.email, data.password, data.firstName, data.lastName);
     if (success) {
       setShowInvitations(true);
-      // Navigate after a delay to allow viewing invitations
       setTimeout(() => {
         navigate('/login');
       }, 500);
     }
     setIsLoading(false);
   };
-  
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number]
+      }
+    }
+  };
+
+  const formVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.8,
+        delay: 0.2,
+        ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number]
+      }
+    }
+  };
+
   return (
     <>
       {showInvitations && <PendingInvitations />}
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-            <CardDescription>
-              Enter your information to create an account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="firstName" className="text-sm font-medium">
-                    First Name
-                  </label>
-                  <Input
-                    id="firstName"
-                    placeholder="John"
-                    {...register('firstName', { required: 'First name is required' })}
-                    className={errors.firstName ? 'border-red-500' : ''}
-                  />
-                  {errors.firstName && (
-                    <p className="text-sm text-red-500">{errors.firstName.message}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="lastName" className="text-sm font-medium">
-                    Last Name
-                  </label>
-                  <Input
-                    id="lastName"
-                    placeholder="Doe"
-                    {...register('lastName', { required: 'Last name is required' })}
-                    className={errors.lastName ? 'border-red-500' : ''}
-                  />
-                  {errors.lastName && (
-                    <p className="text-sm text-red-500">{errors.lastName.message}</p>
-                  )}
-                </div>
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-[#111111] to-[#0D0D0D] relative overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-neon-green/20 to-neon-purple/20 rounded-full blur-3xl"
+            animate={{
+              x: [0, 100, -50, 0],
+              y: [0, -50, 100, 0],
+              scale: [1, 1.2, 0.8, 1],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+          <motion.div
+            className="absolute top-3/4 right-1/4 w-64 h-64 bg-gradient-to-r from-neon-purple/30 to-neon-blue/20 rounded-full blur-3xl"
+            animate={{
+              x: [0, -80, 60, 0],
+              y: [0, 80, -40, 0],
+              scale: [1, 0.7, 1.3, 1],
+            }}
+            transition={{
+              duration: 25,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+        </div>
+
+        {/* Back to Home Button */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="absolute top-6 left-6 z-10"
+        >
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-gray-300 hover:text-neon-green transition-colors duration-300 font-inter"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm" >Back to Home</span>
+          </Link>
+        </motion.div>
+
+        <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="w-full max-w-md"
+          >
+            <Card className="glass-card border-white/10 shadow-2xl">
+              <CardHeader className="space-y-1 text-center">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.3, duration: 0.5 }}
+                  className="flex justify-center mb-4"
+                >
+                  <div className="w-12 h-12 bg-gradient-to-r from-neon-green to-emerald-400 rounded-full flex items-center justify-center">
+                    <UserPlus className="h-6 w-6 text-black" />
+                  </div>
+                </motion.div>
+                <CardTitle className="text-2xl font-syne font-bold text-white">
+                  Create Account
+                </CardTitle>
+                <CardDescription className="text-gray-300 font-inter">
+                  Join CompanyBuddy today
+                </CardDescription>
+              </CardHeader>
               
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  {...register('email', { 
-                    required: 'Email is required',
-                    pattern: {
-                      value: /\S+@\S+\.\S+/,
-                      message: 'Please enter a valid email'
-                    }
-                  })}
-                  className={errors.email ? 'border-red-500' : ''}
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email.message}</p>
-                )}
-              </div>
+              <CardContent>
+                <motion.form
+                  variants={formVariants}
+                  initial="hidden"
+                  animate="visible"
+                  onSubmit={handleSubmit(onSubmit)}
+                  className="space-y-6"
+                >
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="firstName" className="text-sm font-medium text-gray-200 font-inter">
+                        First Name
+                      </label>
+                      <Input
+                        id="firstName"
+                        placeholder="John"
+                        {...register('firstName', { required: 'First name is required' })}
+                        className={`bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-neon-green focus:ring-neon-green/20 transition-all duration-300 ${
+                          errors.firstName ? 'border-red-400 focus:border-red-400' : ''
+                        }`}
+                      />
+                      {errors.firstName && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-red-400"
+                        >
+                          {errors.firstName.message}
+                        </motion.p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label htmlFor="lastName" className="text-sm font-medium text-gray-200 font-inter">
+                        Last Name
+                      </label>
+                      <Input
+                        id="lastName"
+                        placeholder="Doe"
+                        {...register('lastName', { required: 'Last name is required' })}
+                        className={`bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-neon-green focus:ring-neon-green/20 transition-all duration-300 ${
+                          errors.lastName ? 'border-red-400 focus:border-red-400' : ''
+                        }`}
+                      />
+                      {errors.lastName && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-red-400"
+                        >
+                          {errors.lastName.message}
+                        </motion.p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium text-gray-200 font-inter">
+                      Email Address
+                    </label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      {...register('email', { 
+                        required: 'Email is required',
+                        pattern: {
+                          value: /\S+@\S+\.\S+/,
+                          message: 'Please enter a valid email'
+                        }
+                      })}
+                      className={`bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-neon-green focus:ring-neon-green/20 transition-all duration-300 ${
+                        errors.email ? 'border-red-400 focus:border-red-400' : ''
+                      }`}
+                    />
+                    {errors.email && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-400"
+                      >
+                        {errors.email.message}
+                      </motion.p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="password" className="text-sm font-medium text-gray-200 font-inter">
+                      Password
+                    </label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      {...register('password', { 
+                        required: 'Password is required',
+                        minLength: {
+                          value: 6,
+                          message: 'Password must be at least 6 characters'
+                        }
+                      })}
+                      className={`bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-neon-green focus:ring-neon-green/20 transition-all duration-300 ${
+                        errors.password ? 'border-red-400 focus:border-red-400' : ''
+                      }`}
+                    />
+                    {errors.password && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-400"
+                      >
+                        {errors.password.message}
+                      </motion.p>
+                    )}
+                  </div>
+                  
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-neon-green to-emerald-400 text-black font-inter font-semibold py-3 rounded-lg hover:shadow-lg hover:shadow-neon-green/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full"
+                        />
+                      ) : (
+                        "Create Account"
+                      )}
+                    </Button>
+                  </motion.div>
+                </motion.form>
+              </CardContent>
               
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  {...register('password', { 
-                    required: 'Password is required',
-                    minLength: {
-                      value: 6,
-                      message: 'Password must be at least 6 characters'
-                    }
-                  })}
-                  className={errors.password ? 'border-red-500' : ''}
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-500">{errors.password.message}</p>
-                )}
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Create account"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <div className="text-sm text-gray-500">
-              Already have an account? <Link to="/login" className="text-blue-600 hover:text-blue-800">Sign in</Link>
-            </div>
-          </CardFooter>
-        </Card>
+              <CardFooter className="flex flex-col items-center space-y-4">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8, duration: 0.6 }}
+                  className="text-center space-y-2"
+                >
+                  <div className="text-sm text-gray-400 font-inter">
+                    Already have an account?{' '}
+                    <Link
+                      to="/login"
+                      className="text-neon-green hover:text-neon-green/80 transition-colors duration-300 font-medium"
+                    >
+                      Sign in
+                    </Link>
+                  </div>
+                </motion.div>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     </>
   );
