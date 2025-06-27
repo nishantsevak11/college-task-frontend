@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Task, User, TaskStatus, getUserName } from '@/types';
+import { TaskStatus, User, getUserName } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,32 +42,43 @@ type NewTaskFormProps = {
   isCreating?: boolean;
 };
 
+type NewTaskFormData = {
+  title: string;
+  description: string;
+  status: TaskStatus;
+  assignedToId?: string;
+  priority: 'low' | 'medium' | 'high';
+};
+
 const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreating = false }: NewTaskFormProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
-  
-  const form = useForm({
+
+  const form = useForm<NewTaskFormData>({
     defaultValues: {
       title: '',
       description: '',
       status: 'todo' as TaskStatus,
-      assignedToId: '',
+      assignedToId: undefined,
       priority: 'medium' as 'low' | 'medium' | 'high',
     },
   });
-  
-  const onSubmit = (data: any) => {
+
+  const onSubmit = (data: NewTaskFormData) => {
     onCreateTask({
-      ...data,
-      company: companyId,
-      createdById: currentUser._id,
-      dueDate: date,
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      assignedTo: data.assignedToId === 'unassigned' ? undefined : data.assignedToId,
+      priority: data.priority,
+      companyId,
+      dueDate: date ? date.toISOString() : undefined,
     });
     form.reset();
     setDate(undefined);
     setIsOpen(false);
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -80,9 +90,7 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
       <DialogContent className="sm:max-w-[525px] animate-slide-up">
         <DialogHeader>
           <DialogTitle>Create a new task</DialogTitle>
-          <DialogDescription>
-            Fill in the details to create a new task for your team
-          </DialogDescription>
+          <DialogDescription>Fill in the details to create a new task for your team</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -99,7 +107,7 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="description"
@@ -107,17 +115,13 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Describe what needs to be done" 
-                      className="resize-none" 
-                      {...field} 
-                    />
+                    <Textarea placeholder="Describe what needs to be done" className="resize-none" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -125,16 +129,14 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assignee</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select assignee" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
                         {employees.map((employee) => (
                           <SelectItem key={employee._id} value={employee._id}>
                             {getUserName(employee)}
@@ -146,17 +148,14 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="priority"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Priority</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Set priority" />
@@ -173,38 +172,57 @@ const NewTaskForm = ({ companyId, onCreateTask, employees, currentUser, isCreati
                 )}
               />
             </div>
-            
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="todo">To Do</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormItem className="flex flex-col">
               <FormLabel>Due Date (Optional)</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
-                      variant={"outline"}
-                      className={cn(
-                        "pl-3 text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
+                      variant="outline"
+                      className={cn('pl-3 text-left font-normal', !date && 'text-muted-foreground')}
                     >
-                      {date ? format(date, "PPP") : "Pick a date"}
+                      {date ? format(date, 'PPP') : 'Pick a date'}
                       <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
+                  <Calendar mode="single" selected={date} onSelect={
+                    setDate}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
+              <FormMessage />
             </FormItem>
-            
+
             <DialogFooter>
               <Button type="submit" disabled={isCreating}>
-                {isCreating ? "Creating..." : "Create Task"}
+                {isCreating ? 'Creating...' : 'Create Task'}
               </Button>
             </DialogFooter>
           </form>

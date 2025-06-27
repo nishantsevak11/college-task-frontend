@@ -24,19 +24,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   const fetchCurrentUser = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const userData = await userService.getCurrentUser();
-      if (!isApiError(userData)) {
-        setUser(userData);
-        return true;
+      // THE FIX: The response from /users/current should contain the full user object,
+      // including the 'id' which we alias to '_id' in the frontend type, or just use `_id`.
+      // Ensure your backend's /users/current route sends the user's _id.
+      if (!isApiError(userData) && userData.id) { // Check for the existence of the ID
+        // The user object from the API has `id`, but we use `_id` in the frontend type.
+        // Let's ensure the state has `_id`.
+        setUser({ ...userData, _id: userData.id });
       } else {
+        authService.logout();
         setUser(null);
-        return false;
       }
     } catch (error) {
+      authService.logout();
       setUser(null);
-      return false;
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const response = await authService.login({ email, password });
     
     if (!isApiError(response)) {
-      setUser({ ...response.user});
+      setUser({ ...response.user, _id: response.user.id });
+      localStorage.setItem('authToken', response.token);
       toast({
         title: "Login successful",
         description: `Welcome back, ${response.user.firstName}!`,
